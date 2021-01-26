@@ -23,7 +23,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.kit.datamanager.entities.Identifier;
 import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.entities.RepoUserRole;
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.Agent;
@@ -123,7 +123,7 @@ public class DataResourceControllerTest{
   private IAuditService<ContentInformation> contentInformationAuditService;
 
   @Autowired
-  private ApplicationProperties applicationProperties;
+  private RepoBaseConfiguration applicationProperties;
 
   private String adminToken;
   private String userToken;

@@ -15,7 +15,7 @@
  */
 package edu.kit.datamanager.repo.test;
 
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import java.net.URI;
 import org.junit.Assert;
 import org.junit.Test;
@@ -24,11 +24,11 @@ import org.junit.Test;
  *
  * @author jejkal
  */
-public class ApplicationPropertiesTest{
+public class RepoBaseConfigurationTest{
 
   @Test
-  public void testApplicationProperties() throws Exception{
-    ApplicationProperties props = new ApplicationProperties();
+  public void testRepoBaseConfiguration() throws Exception{
+    RepoBaseConfiguration props = new RepoBaseConfiguration();
     props.setBasepath(URI.create("file:///tmp/").toURL());
     props.setJwtSecret("test123");
     Assert.assertEquals("file:/tmp/", props.getBasepath().toString());
@@ -37,10 +37,10 @@ public class ApplicationPropertiesTest{
 
   @Test
   public void testEqualsAndHashCode() throws Exception{
-    ApplicationProperties props1 = new ApplicationProperties();
+    RepoBaseConfiguration props1 = new RepoBaseConfiguration();
     props1.setBasepath(URI.create("file:///tmp/").toURL());
     props1.setJwtSecret("test123");
-    ApplicationProperties props2 = new ApplicationProperties();
+    RepoBaseConfiguration props2 = new RepoBaseConfiguration();
     props2.setBasepath(URI.create("file:///tmp/").toURL());
     props2.setJwtSecret("test123");
     Assert.assertTrue(props1.equals(props2));

@@ -15,7 +15,7 @@
  */
 package edu.kit.datamanager.repo.service.impl;
 
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.service.IAuditService;
 import java.util.List;
@@ -42,10 +42,10 @@ public class DataResourceAuditService implements IAuditService<DataResource>{
   @Autowired
   private Logger LOGGER;
   private final Javers javers;
-  private final ApplicationProperties applicationProperties;
+  private final RepoBaseConfiguration applicationProperties;
 
   @Autowired
-  public DataResourceAuditService(Javers javers, ApplicationProperties applicationProperties){
+  public DataResourceAuditService(Javers javers, RepoBaseConfiguration applicationProperties){
     this.javers = javers;
     this.applicationProperties = applicationProperties;
   }

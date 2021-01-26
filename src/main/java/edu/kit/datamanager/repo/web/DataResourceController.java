@@ -25,7 +25,7 @@ import edu.kit.datamanager.exceptions.CustomInternalServerError;
 import edu.kit.datamanager.exceptions.ResourceElsewhereException;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
 import edu.kit.datamanager.exceptions.UpdateForbiddenException;
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -100,7 +100,7 @@ public class DataResourceController implements IDataResourceController {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
     @Autowired
-    private ApplicationProperties applicationProperties;
+    private RepoBaseConfiguration applicationProperties;
 
     /**
      * Default constructor.
@@ -110,7 +110,7 @@ public class DataResourceController implements IDataResourceController {
      * @param contentInformationService Content information service instance
      * added e.g. via dependency injection.
      */
-    public DataResourceController(IDataResourceService dataResourceService, IAuditService<DataResource> auditService, IAuditService<ContentInformation> contentAuditService, IContentInformationService contentInformationService, ApplicationProperties applicationProperties) {
+    public DataResourceController(IDataResourceService dataResourceService, IAuditService<DataResource> auditService, IAuditService<ContentInformation> contentAuditService, IContentInformationService contentInformationService, RepoBaseConfiguration applicationProperties) {
         super();
         this.dataResourceService = dataResourceService;
         this.contentInformationService = contentInformationService;
@@ -118,9 +118,6 @@ public class DataResourceController implements IDataResourceController {
         this.contentAuditService = contentAuditService;
         this.applicationProperties = applicationProperties;
 
-        if (!this.applicationProperties.isAuditEnabled() && !"none".equals(this.applicationProperties.getDefaultVersioningService())) {
-            throw new IllegalArgumentException("Conflicting configuration properties detected. 'repo.audit.enabled' must be 'true' if 'repo.file.versioning.default' is not 'none'.");
-        }
     }
 
     @Override

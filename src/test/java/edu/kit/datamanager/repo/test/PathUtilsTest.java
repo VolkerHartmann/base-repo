@@ -16,7 +16,7 @@
 package edu.kit.datamanager.repo.test;
 
 import edu.kit.datamanager.exceptions.CustomInternalServerError;
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.util.PathUtils;
 import java.net.URL;
@@ -40,7 +40,7 @@ public class PathUtilsTest {
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
         DataResource resource = DataResource.factoryNewDataResource("test123");
-        ApplicationProperties props = new ApplicationProperties();
+        RepoBaseConfiguration props = new RepoBaseConfiguration();
         //test with trailing slash 
         props.setBasepath(new URL("file:///tmp/"));
         props.setPathPattern("@{year}");
@@ -63,7 +63,7 @@ public class PathUtilsTest {
     @Test(expected = CustomInternalServerError.class)
     public void testInvalidBasePath() throws Exception {
         DataResource resource = DataResource.factoryNewDataResource("test123");
-        ApplicationProperties props = new ApplicationProperties();
+        RepoBaseConfiguration props = new RepoBaseConfiguration();
         props.setBasepath(new URL("file:///fold?<>:er/"));
         Assert.fail("Creating the following path should not work: " + PathUtils.getDataUri(resource, "folder/file.txt", props));
     }
@@ -72,7 +72,7 @@ public class PathUtilsTest {
     public void testNoInternalIdentifier() throws Exception {
         DataResource resource = DataResource.factoryNewDataResource("test123");
         resource.getAlternateIdentifiers().clear();
-        ApplicationProperties props = new ApplicationProperties();
+        RepoBaseConfiguration props = new RepoBaseConfiguration();
         props.setBasepath(new URL("file:///folder/"));
         Assert.fail("Creating the following path should not work: " + PathUtils.getDataUri(resource, "folder/file.txt", props));
     }

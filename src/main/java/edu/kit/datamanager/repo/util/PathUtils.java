@@ -15,7 +15,7 @@
  */
 package edu.kit.datamanager.repo.util;
 
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.exceptions.CustomInternalServerError;
 import java.net.URI;
@@ -49,12 +49,12 @@ public class PathUtils {
      *
      * @param relativeDataPath The relative data path used to access the data.
      * @param parentResource The parent data resource.
-     * @param properties ApplicationProperties used to obtain the configured
+     * @param properties RepoBaseConfiguration used to obtain the configured
      * data base path.
      *
      * @return The data URI.
      */
-    public static URI getDataUri(DataResource parentResource, String relativeDataPath, ApplicationProperties properties) {
+    public static URI getDataUri(DataResource parentResource, String relativeDataPath, RepoBaseConfiguration properties) {
         try {
             String internalIdentifier = DataResourceUtils.getInternalIdentifier(parentResource);
             if (internalIdentifier == null) {
@@ -72,7 +72,7 @@ public class PathUtils {
         }
     }
 
-    public static String substitutePathPattern(ApplicationProperties properties) {
+    public static String substitutePathPattern(RepoBaseConfiguration properties) {
         Map<String, String> data = new HashMap<>();
         data.put("year", Integer.toString(Calendar.getInstance().get(Calendar.YEAR)));
         data.put("month", Integer.toString(Calendar.getInstance().get(Calendar.MONTH)));

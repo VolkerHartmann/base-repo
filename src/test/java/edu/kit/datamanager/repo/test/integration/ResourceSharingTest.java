@@ -15,7 +15,7 @@
  */
 package edu.kit.datamanager.repo.test.integration;
 
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.DataResource;
@@ -61,7 +61,7 @@ public class ResourceSharingTest{
   private IContentInformationDao contentInformationDao;
 
   @Autowired
-  private ApplicationProperties applicationProperties;
+  private RepoBaseConfiguration applicationProperties;
 
   private String adminToken;
   private String userToken;
