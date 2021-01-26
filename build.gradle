@@ -31,7 +31,7 @@ apply plugin: 'io.spring.dependency-management'
 
 
 jar {
-    baseName = 'base-repo'
+    baseName = 'repo-base'
     version = System.getenv('version')
 }
 

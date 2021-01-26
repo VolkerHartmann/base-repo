@@ -26,7 +26,7 @@ import edu.kit.datamanager.exceptions.CustomInternalServerError;
 import edu.kit.datamanager.exceptions.FeatureNotImplementedException;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
 import edu.kit.datamanager.exceptions.UpdateForbiddenException;
-import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.dao.spec.contentinformation.ContentInformationContentUriSpecification;
 import edu.kit.datamanager.repo.dao.spec.contentinformation.ContentInformationMediaTypeSpecification;
 import edu.kit.datamanager.repo.dao.spec.contentinformation.ContentInformationMatchSpecification;
@@ -95,7 +95,7 @@ public class ContentInformationService implements IContentInformationService{
   private IContentInformationDao dao;
 
   @Autowired
-  private ApplicationProperties applicationProperties;
+  private RepoBaseConfiguration applicationProperties;
   @Autowired
   private IMessagingService messagingService;
   @Autowired
@@ -143,7 +143,7 @@ public class ContentInformationService implements IContentInformationService{
       logger.trace("User upload detected. Preparing to consume data.");
       //file upload
 
-      String versioningService = (contentInformation != null && contentInformation.getVersioningService() != null) ? contentInformation.getVersioningService() : applicationProperties.getDefaultVersioningService();
+      String versioningService = (contentInformation != null && contentInformation.getVersioningService() != null) ? contentInformation.getVersioningService() : applicationProperties.getVersioning();
       contentInfo.setVersioningService(versioningService);
       boolean fileWritten = false;
       logger.trace("Trying to use versioning service named '{}' for writing file content.", versioningService);
