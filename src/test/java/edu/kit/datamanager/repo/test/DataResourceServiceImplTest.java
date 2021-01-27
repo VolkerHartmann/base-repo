@@ -22,6 +22,7 @@ import edu.kit.datamanager.exceptions.PatchApplicationException;
 import edu.kit.datamanager.exceptions.ResourceAlreadyExistException;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
 import edu.kit.datamanager.exceptions.UpdateForbiddenException;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.service.IDataResourceService;
 import java.time.Instant;
@@ -44,6 +45,10 @@ public class DataResourceServiceImplTest{
   @Test
   public void testDefaultImpl(){
     IDataResourceService dummyService = new IDataResourceService(){
+      @Override
+      public void configure(RepoBaseConfiguration repoBaseConfiguration) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+      }
       @Override
       public DataResource create(DataResource resource, String callerPrincipal, String callerFirstName, String callerLastName) throws BadArgumentException, ResourceAlreadyExistException{
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.

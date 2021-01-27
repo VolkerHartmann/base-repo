@@ -29,22 +29,19 @@ import org.javers.repository.jql.QueryBuilder;
 import org.javers.repository.jql.ShadowScope;
 import org.javers.shadow.Shadow;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author jejkal
  */
-@Service
 public class DataResourceAuditService implements IAuditService<DataResource>{
 
-  @Autowired
-  private Logger LOGGER;
+  private static final Logger LOGGER = LoggerFactory.getLogger(DataResourceAuditService.class);
+  
   private final Javers javers;
   private final RepoBaseConfiguration applicationProperties;
 
-  @Autowired
   public DataResourceAuditService(Javers javers, RepoBaseConfiguration applicationProperties){
     this.javers = javers;
     this.applicationProperties = applicationProperties;

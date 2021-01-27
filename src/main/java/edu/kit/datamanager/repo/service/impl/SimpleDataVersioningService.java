@@ -22,7 +22,6 @@ import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.util.PathUtils;
-import edu.kit.datamanager.service.IVersioningService;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,24 +42,25 @@ import org.apache.tika.parser.AutoDetectParser;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import edu.kit.datamanager.repo.service.IRepoVersioningService;
 
 /**
  *
  * @author jejkal
  */
 @Component
-public class SimpleDataVersioningService implements IVersioningService{
+public class SimpleDataVersioningService implements IRepoVersioningService{
 
   @Autowired
   private Logger logger;
   @Autowired
   private IContentInformationDao dao;
-  @Autowired
+
   private RepoBaseConfiguration applicationProperties;
 
   @Override
-  public void configure(){
-
+  public void configure(RepoBaseConfiguration applicationProperties){
+    this.applicationProperties = applicationProperties;
   }
 
   @Override

@@ -16,7 +16,6 @@
 package edu.kit.datamanager.repo.service.impl;
 
 import com.github.fge.jsonpatch.JsonPatch;
-import com.monitorjbl.json.JsonResult;
 import edu.kit.datamanager.entities.ContentElement;
 import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.entities.RepoUserRole;
@@ -38,11 +37,11 @@ import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.domain.ContentInformation;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.service.IContentInformationService;
+import edu.kit.datamanager.repo.service.IRepoVersioningService;
 import edu.kit.datamanager.service.IAuditService;
 import edu.kit.datamanager.service.IContentCollectionProvider;
 import edu.kit.datamanager.service.IContentProvider;
 import edu.kit.datamanager.service.IMessagingService;
-import edu.kit.datamanager.service.IVersioningService;
 import edu.kit.datamanager.util.AuthenticationHelper;
 import edu.kit.datamanager.util.ControllerUtils;
 import edu.kit.datamanager.util.PatchUtil;
@@ -65,7 +64,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.servlet.http.HttpServletResponse;
+import org.javers.core.Javers;
+import org.javers.core.JaversBuilder;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.data.domain.Page;
@@ -86,22 +88,18 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
  */
 public class ContentInformationService implements IContentInformationService{
 
-  private final JsonResult json = JsonResult.instance();
-
-  @Autowired
-  private Logger logger;
+  private static final Logger LOGGER = LoggerFactory.getLogger(ContentInformationService.class);
 
   @Autowired
   private IContentInformationDao dao;
 
-  @Autowired
   private RepoBaseConfiguration applicationProperties;
   @Autowired
   private IMessagingService messagingService;
-  @Autowired
+  
   private IAuditService<ContentInformation> auditService;
   @Autowired
-  private IVersioningService[] versioningServices;
+  private IRepoVersioningService[] versioningServices;
 
   @Autowired
   private IContentProvider[] contentProviders;
@@ -109,13 +107,23 @@ public class ContentInformationService implements IContentInformationService{
   @Autowired
   private IContentCollectionProvider[] collectionContentProviders;
 
+  public ContentInformationService(){
+  }
+  
+  @Override
+  public void configure(RepoBaseConfiguration applicationProperties){
+    this.applicationProperties = applicationProperties;
+    Javers javers = JaversBuilder.javers().build();
+    auditService = new ContentInformationAuditService(javers, applicationProperties);
+  }
+
   @Override
   @Transactional
   public ContentInformation create(ContentInformation contentInformation, DataResource resource,
           String path,
           InputStream file,
           boolean force){
-    logger.trace("Performing create({}, {}, {}, {}, {}).", contentInformation, "DataResource#" + resource.getId(), "<InputStream>", path, force);
+    LOGGER.trace("Performing create({}, {}, {}, {}, {}).", contentInformation, "DataResource#" + resource.getId(), "<InputStream>", path, force);
 
     //check for existing content information
     //We use here no tags as tags are just for reflecting related content elements, but all tags are associated with the same content element.
@@ -130,7 +138,7 @@ public class ContentInformationService implements IContentInformationService{
       contentInfo = existingContentInformation.getContent().get(0);
       options.put("contentUri", contentInfo.getContentUri());
     } else{
-      logger.trace("No existing content information found.");
+      LOGGER.trace("No existing content information found.");
       //no existing content information, create new or take provided
       contentInfo = (contentInformation != null) ? contentInformation : ContentInformation.createContentInformation(path);
       contentInfo.setId(null);
@@ -140,36 +148,36 @@ public class ContentInformationService implements IContentInformationService{
 
     String newFileVersion = null;
     if(file != null){
-      logger.trace("User upload detected. Preparing to consume data.");
+      LOGGER.trace("User upload detected. Preparing to consume data.");
       //file upload
 
       String versioningService = (contentInformation != null && contentInformation.getVersioningService() != null) ? contentInformation.getVersioningService() : applicationProperties.getVersioning();
       contentInfo.setVersioningService(versioningService);
       boolean fileWritten = false;
-      logger.trace("Trying to use versioning service named '{}' for writing file content.", versioningService);
-      for(IVersioningService service : versioningServices){
+      LOGGER.trace("Trying to use versioning service named '{}' for writing file content.", versioningService);
+      for(IRepoVersioningService service : versioningServices){
         if(versioningService.equals(service.getServiceName())){
-          logger.trace("Versioning service found, writing file content.");
-          service.configure();
+          LOGGER.trace("Versioning service found, writing file content.");
+          service.configure(applicationProperties);
           try{
             service.write(resource.getId(), AuthenticationHelper.getPrincipal(), path, file, options);
           } catch(Throwable t){
-            logger.error("Failed to write content using versioning service " + versioningService + ".", t);
+            LOGGER.error("Failed to write content using versioning service " + versioningService + ".", t);
             throw t;
           }
-          logger.trace("File content successfully written.");
+          LOGGER.trace("File content successfully written.");
           fileWritten = true;
         } else{
-          logger.trace("Skipping service '{}'", service.getServiceName());
+          LOGGER.trace("Skipping service '{}'", service.getServiceName());
         }
       }
 
       if(!fileWritten){
-        logger.error("No versioning service found for name '{}'.", versioningService);
+        LOGGER.error("No versioning service found for name '{}'.", versioningService);
         throw new BadArgumentException("Versioning service '" + versioningService + "' not found.");
       }
 
-      logger.trace("Obtaining file-specific information from versioning service response.");
+      LOGGER.trace("Obtaining file-specific information from versioning service response.");
       if(options.containsKey("size")){
         contentInfo.setSize(Long.parseLong(options.get("size")));
       }
@@ -188,68 +196,68 @@ public class ContentInformationService implements IContentInformationService{
         newFileVersion = options.get("fileVersion");
       }
 
-      logger.trace("File successfully written using versioning service '{}'.", versioningService);
+      LOGGER.trace("File successfully written using versioning service '{}'.", versioningService);
     } else{
-      logger.trace("No user upload detected. Checking content URI in content information.");
+      LOGGER.trace("No user upload detected. Checking content URI in content information.");
       //no file upload, take data reference URI from provided content information
       if(contentInformation == null || contentInformation.getContentUri() == null){
-        logger.error("No content URI provided in content information. Throwing BadArgumentException.");
+        LOGGER.error("No content URI provided in content information. Throwing BadArgumentException.");
         throw new BadArgumentException("Neither a file upload nor an external content URI were provided.");
       } else{
-        logger.trace("Content URI {} detected. Checking URI scheme.", contentInfo.getContentUri());
+        LOGGER.trace("Content URI {} detected. Checking URI scheme.", contentInfo.getContentUri());
         if("file".equals(URI.create(contentInfo.getContentUri()).getScheme().toLowerCase()) && !AuthenticationHelper.hasAuthority(RepoUserRole.ADMINISTRATOR.getValue())){
-          logger.error("Content URI scheme is 'file' but caller has no ADMINISTRATOR role. Content information creation rejected. Throwing BadArgumentException.");
+          LOGGER.error("Content URI scheme is 'file' but caller has no ADMINISTRATOR role. Content information creation rejected. Throwing BadArgumentException.");
           throw new BadArgumentException("You are not permitted to add content information with URI scheme of type 'file'.");
         }
-        logger.trace("Accepting attributed from provided content information.");
+        LOGGER.trace("Accepting attributed from provided content information.");
         //take content uri and provided checksum and size, if available
         contentInfo.setContentUri(contentInformation.getContentUri());
-        logger.debug("Assigned content URI {} to content information.", contentInfo.getContentUri());
+        LOGGER.debug("Assigned content URI {} to content information.", contentInfo.getContentUri());
         contentInfo.setSize(contentInformation.getSize());
-        logger.debug("Assigned size {} to content information.", contentInfo.getSize());
+        LOGGER.debug("Assigned size {} to content information.", contentInfo.getSize());
         contentInfo.setHash(contentInformation.getHash());
-        logger.debug("Assigned hash {} to content information.", contentInfo.getHash());
+        LOGGER.debug("Assigned hash {} to content information.", contentInfo.getHash());
       }
     }
 
     //copy metadata and tags from provided content information if available
-    logger.trace("Checking for additional metadata.");
+    LOGGER.trace("Checking for additional metadata.");
     if(contentInformation != null){
       if(contentInformation.getMetadata() != null){
-        logger.trace("Additional metadata found. Transferring value.");
+        LOGGER.trace("Additional metadata found. Transferring value.");
         contentInfo.setMetadata(contentInformation.getMetadata());
       }
 
       if(contentInformation.getTags() != null){
-        logger.trace("User-provided tags found. Transferring value.");
+        LOGGER.trace("User-provided tags found. Transferring value.");
         contentInfo.setTags(contentInformation.getTags());
       }
       if(contentInformation.getUploader() != null){
-        logger.trace("User-provided uploader found. Transferring value.");
+        LOGGER.trace("User-provided uploader found. Transferring value.");
         contentInfo.setUploader(contentInformation.getUploader());
       }
     } else{
       String principal = AuthenticationHelper.getPrincipal();
-      logger.trace("No content information provided. Setting uploader property from caller principal value {}.", principal);
+      LOGGER.trace("No content information provided. Setting uploader property from caller principal value {}.", principal);
       contentInfo.setUploader(principal);
     }
 
     long newMetadataVersion = (contentInfo.getId() != null) ? auditService.getCurrentVersion(Long.toString(contentInfo.getId())) + 1 : 1;
-    logger.trace("Setting new version number of content information to {}.", newMetadataVersion);
+    LOGGER.trace("Setting new version number of content information to {}.", newMetadataVersion);
     contentInfo.setVersion((int) newMetadataVersion);
 
     if(newFileVersion == null){
-      logger.trace("No file version provided by versioning service. Using metadata version {} as file version.", newMetadataVersion);
+      LOGGER.trace("No file version provided by versioning service. Using metadata version {} as file version.", newMetadataVersion);
       contentInfo.setFileVersion(Long.toString(newMetadataVersion));
     }
 
-    logger.trace("Persisting content information.");
+    LOGGER.trace("Persisting content information.");
     ContentInformation result = getDao().save(contentInfo);
 
-    logger.trace("Capturing audit information.");
+    LOGGER.trace("Capturing audit information.");
     auditService.captureAuditInformation(result, AuthenticationHelper.getPrincipal());
 
-    logger.trace("Sending CREATE event.");
+    LOGGER.trace("Sending CREATE event.");
     messagingService.send(DataResourceMessage.factoryCreateDataMessage(resource.getId(), result.getRelativePath(), result.getContentUri(), result.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
     return result;
   }
@@ -276,15 +284,15 @@ public class ContentInformationService implements IContentInformationService{
             URI contentUri = URI.create(c.getContentUri());
             if(provider.canProvide(contentUri.getScheme())){
               String contextUri = ServletUriComponentsBuilder.fromCurrentRequest().toUriString();
-              logger.trace("Adding collection mapping '{}':'{}' with checksum '{}' to list. Additionally providing context Uri {} and size {}.", c.getRelativePath(), contentUri, c.getHash(), contextUri, c.getSize());
+              LOGGER.trace("Adding collection mapping '{}':'{}' with checksum '{}' to list. Additionally providing context Uri {} and size {}.", c.getRelativePath(), contentUri, c.getHash(), contextUri, c.getSize());
               elements.add(ContentElement.createContentElement(resource.getId(), c.getRelativePath(), c.getContentUri(), c.getFileVersion(), c.getVersioningService(), c.getHash(), contextUri, c.getSize()));
             } else{
-              logger.debug("Skip adding collection mapping '{}':'{}' to map as content provider {} is not capable of providing URI scheme.", c.getRelativePath(), contentUri, provider.getClass());
+              LOGGER.debug("Skip adding collection mapping '{}':'{}' to map as content provider {} is not capable of providing URI scheme.", c.getRelativePath(), contentUri, provider.getClass());
             }
           });
-          logger.trace("Start providing content.");
+          LOGGER.trace("Start providing content.");
           provider.provide(elements, MediaType.parseMediaType(acceptHeader), response);
-          logger.trace("Content successfully provided.");
+          LOGGER.trace("Content successfully provided.");
           provided = true;
         } else{
           Collection<MediaType> col = new ArrayList<>();
@@ -296,7 +304,7 @@ public class ContentInformationService implements IContentInformationService{
 
       if(!provided){
         //we are done here, content is already submitted
-        logger.info("No content collection provider found for media type {} in Accept header. Throwing HTTP 415 (UNSUPPORTED_MEDIA_TYPE).", acceptHeaderType);
+        LOGGER.info("No content collection provider found for media type {} in Accept header. Throwing HTTP 415 (UNSUPPORTED_MEDIA_TYPE).", acceptHeaderType);
         throw new UnsupportedMediaTypeStatusException(acceptHeaderType, new ArrayList<>(acceptableMediaTypes));
       }
     } else{
@@ -304,11 +312,11 @@ public class ContentInformationService implements IContentInformationService{
       ContentInformation contentInformation = getContentInformation(resource.getId(), path, version);
       uri = (contentInformation.getContentUri() != null) ? URI.create(contentInformation.getContentUri()) : null;
       String contentScheme = (uri != null) ? uri.getScheme() : "file";
-      logger.debug("Trying to provide content at URI {} by any configured content provider.", uri);
+      LOGGER.debug("Trying to provide content at URI {} by any configured content provider.", uri);
       boolean provided = false;
       for(IContentProvider contentProvider : contentProviders){
         if(contentProvider.canProvide(contentScheme)){
-          logger.trace("Using content provider {}.", contentProvider.getClass());
+          LOGGER.trace("Using content provider {}.", contentProvider.getClass());
           String contextUri = ServletUriComponentsBuilder.fromCurrentRequest().toUriString();
           contentProvider.provide(ContentElement.createContentElement(resource.getId(),
                   contentInformation.getRelativePath(), contentInformation.getContentUri(),
@@ -329,7 +337,7 @@ public class ContentInformationService implements IContentInformationService{
         String dataUri = contentInformation.getContentUri();
         if(dataUri != null){
           uri = URI.create(dataUri);
-          logger.info("No content provider found for URI {}. Returning URI in Content-Location header.", uri);
+          LOGGER.info("No content provider found for URI {}. Returning URI in Content-Location header.", uri);
           HttpHeaders headers = new HttpHeaders();
           headers.add("Content-Location", uri.toString());
           Set<String> headerKeys = headers.keySet();
@@ -340,7 +348,7 @@ public class ContentInformationService implements IContentInformationService{
           });
           response.setStatus(HttpStatus.NO_CONTENT.value());
         } else{
-          logger.info("No data URI found for resource with identifier {} and path {}. Returning HTTP 404.", resource.getId(), path);
+          LOGGER.info("No data URI found for resource with identifier {} and path {}. Returning HTTP 404.", resource.getId(), path);
           throw new ResourceNotFoundException("No data URI found for the addressed content.");
         }
       }
@@ -349,26 +357,26 @@ public class ContentInformationService implements IContentInformationService{
 
   @Override
   public ContentInformation getContentInformation(String identifier, String relativePath, Long version){
-    logger.trace("Performing getContentInformation({}, {}).", identifier, relativePath);
+    LOGGER.trace("Performing getContentInformation({}, {}).", identifier, relativePath);
 
-    logger.trace("Performing findOne({}, {}).", identifier, relativePath);
+    LOGGER.trace("Performing findOne({}, {}).", identifier, relativePath);
     Specification<ContentInformation> spec = Specification.where(ContentInformationMatchSpecification.toSpecification(identifier, relativePath, true));
     Optional<ContentInformation> contentInformation = dao.findOne(spec);
 
     if(!contentInformation.isPresent()){
       //TODO: check later for collection download
-      logger.error("No content found for resource {} at path {}. Throwing ResourceNotFoundException.", identifier, relativePath);
+      LOGGER.error("No content found for resource {} at path {}. Throwing ResourceNotFoundException.", identifier, relativePath);
       throw new ResourceNotFoundException("No content information for identifier " + identifier + ", path " + relativePath + " found.");
     }
     ContentInformation result = contentInformation.get();
     if(Objects.nonNull(version)){
-      logger.trace("Obtained content information for identifier {}. Checking for shadow of version {}.", result.getId(), version);
+      LOGGER.trace("Obtained content information for identifier {}. Checking for shadow of version {}.", result.getId(), version);
       Optional<ContentInformation> optAuditResult = auditService.getResourceByVersion(Long.toString(result.getId()), version);
       if(optAuditResult.isPresent()){
-        logger.trace("Shadow successfully obtained. Returning version {} of content information with id {}.", version, result.getId());
+        LOGGER.trace("Shadow successfully obtained. Returning version {} of content information with id {}.", version, result.getId());
         return optAuditResult.get();
       } else{
-        logger.info("Version {} of content information {} not found. Returning HTTP 404 (NOT_FOUND).", version, result.getId());
+        LOGGER.info("Version {} of content information {} not found. Returning HTTP 404 (NOT_FOUND).", version, result.getId());
         throw new ResourceNotFoundException("Content information with identifier " + result.getId() + " is not available in version " + version + ".");
       }
     }
@@ -378,18 +386,18 @@ public class ContentInformationService implements IContentInformationService{
 
   @Override
   public Optional<String> getAuditInformationAsJson(String resourceIdentifier, Pageable pgbl){
-    logger.trace("Performing getAuditInformation({}, {}).", resourceIdentifier, pgbl);
+    LOGGER.trace("Performing getAuditInformation({}, {}).", resourceIdentifier, pgbl);
     return auditService.getAuditInformationAsJson(resourceIdentifier, pgbl.getPageNumber(), pgbl.getPageSize());
   }
 
   @Override
   public ContentInformation findById(String identifier) throws ResourceNotFoundException{
-    logger.trace("Performing findById({}).", identifier);
+    LOGGER.trace("Performing findById({}).", identifier);
     Long id = Long.parseLong(identifier);
     Optional<ContentInformation> contentInformation = getDao().findById(id);
     if(!contentInformation.isPresent()){
       //TODO: check later for collection download
-      logger.error("No content found for id {}. Throwing ResourceNotFoundException.", id);
+      LOGGER.error("No content found for id {}. Throwing ResourceNotFoundException.", id);
       throw new ResourceNotFoundException("No content information for id " + id + " found.");
     }
     return contentInformation.get();
@@ -400,73 +408,73 @@ public class ContentInformationService implements IContentInformationService{
           List<String> callerIdentities,
           boolean callerIsAdmin,
           Pageable pgbl){
-    logger.trace("Performing findByExample({}, {}).", example, pgbl);
+    LOGGER.trace("Performing findByExample({}, {}).", example, pgbl);
     Page<ContentInformation> page;
 
     if(example == null){
       //obtain all accessible content elements
-      logger.trace("No example provided. Returning all accessible content elements.");
+      LOGGER.trace("No example provided. Returning all accessible content elements.");
       Specification<ContentInformation> spec = Specification.where(ContentInformationPermissionSpecification.toSpecification(null, callerIdentities, PERMISSION.READ));
       page = dao.findAll(spec, pgbl);
     } else{
       Specification<ContentInformation> spec;
 
       if(example.getParentResource() != null && example.getParentResource().getId() != null){
-        logger.trace("Parent resource with id {} provided in example. Searching for content in single resource.", example.getParentResource().getId());
+        LOGGER.trace("Parent resource with id {} provided in example. Searching for content in single resource.", example.getParentResource().getId());
         spec = Specification.where(ContentInformationPermissionSpecification.toSpecification(example.getParentResource().getId(), callerIdentities, PERMISSION.READ));
       } else{
-        logger.trace("No parent resource provided in example. Searching for content in all resources.");
+        LOGGER.trace("No parent resource provided in example. Searching for content in all resources.");
         spec = Specification.where(ContentInformationPermissionSpecification.toSpecification(null, callerIdentities, PERMISSION.READ));
       }
 
-      logger.trace("Adding additional query specifications based on example {}.", example);
+      LOGGER.trace("Adding additional query specifications based on example {}.", example);
 
       if(example.getRelativePath() != null){
-        logger.trace("Adding relateive path query specification for relative path {}.", example.getRelativePath());
+        LOGGER.trace("Adding relateive path query specification for relative path {}.", example.getRelativePath());
         spec = spec.and(ContentInformationRelativePathSpecification.toSpecification(example.getRelativePath(), false));
       }
 
       if(example.getContentUri() != null){
-        logger.trace("Adding content Uri query specification for metadata {}.", example.getContentUri());
+        LOGGER.trace("Adding content Uri query specification for metadata {}.", example.getContentUri());
         spec = spec.and(ContentInformationContentUriSpecification.toSpecification(example.getContentUri(), false));
       }
 
       if(example.getMediaType() != null){
-        logger.trace("Adding mediatype query specification for media type {}.", example.getMediaType());
+        LOGGER.trace("Adding mediatype query specification for media type {}.", example.getMediaType());
         spec = spec.and(ContentInformationMediaTypeSpecification.toSpecification(example.getMediaType(), false));
       }
 
       if(example.getMetadata() != null && !example.getMetadata().isEmpty()){
-        logger.trace("Adding metadata query specification for metadata {}.", example.getMetadata());
+        LOGGER.trace("Adding metadata query specification for metadata {}.", example.getMetadata());
         spec = spec.and(ContentInformationMetadataSpecification.toSpecification(example.getMetadata()));
       }
 
       if(example.getTags() != null && !example.getTags().isEmpty()){
-        logger.debug("Adding tag query specification for tags {}.", example.getTags());
+        LOGGER.debug("Adding tag query specification for tags {}.", example.getTags());
         spec = spec.and(ContentInformationTagSpecification.toSpecification(example.getTags().toArray(new String[]{})));
       }
 
-      logger.trace("Calling findAll for collected specs and page information {}.", pgbl);
+      LOGGER.trace("Calling findAll for collected specs and page information {}.", pgbl);
       page = dao.findAll(spec, pgbl);
     }
 
-    logger.trace("Returning page content.");
+    LOGGER.trace("Returning page content.");
     return page;
   }
 
   @Override
   public Page<ContentInformation> findAll(ContentInformation c, Instant lastUpdateFrom, Instant lastUpdateUntil, Pageable pgbl){
-    logger.trace("Performing findAll({}, {}, {}, {}).", c, lastUpdateFrom, lastUpdateUntil, pgbl);
-    logger.info("Obtaining content information from an lastUpdate range is not supported. Ignoring lastUpdate arguments.");
+    LOGGER.trace("Performing findAll({}, {}, {}, {}).", c, lastUpdateFrom, lastUpdateUntil, pgbl);
+    LOGGER.info("Obtaining content information from an lastUpdate range is not supported. Ignoring lastUpdate arguments.");
     return findAll(c, pgbl);
   }
 
   @Override
   public Page<ContentInformation> findAll(ContentInformation c, Pageable pgbl){
-    logger.trace("Performing findAll({}, {}).", c, pgbl);
+    LOGGER.trace("Performing findAll({}, {}).", c, pgbl);
 
     if(c.getParentResource() == null){
-      logger.error("Parent resource in template must not be null. Throwing CustomInternalServerError.");
+      LOGGER.error("Parent resource in template must not be null. Throwing CustomInternalServerError.");
       throw new CustomInternalServerError("Parent resource is missing from template.");
     }
     String parentId = c.getParentResource().getId();
@@ -476,7 +484,7 @@ public class ContentInformationService implements IContentInformationService{
     // eventPublisher.publishEvent(new PaginatedResultsRetrievedEvent<>(ContentInformation.class, uriBuilder, response, page.getNumber(), page.getTotalPages(), pageSize));
     Specification<ContentInformation> spec = Specification.where(ContentInformationMatchSpecification.toSpecification(parentId, relativePath, false));
     if(tags != null && !tags.isEmpty()){
-      logger.debug("Content information tags {} provided. Using TagSpecification.", tags);
+      LOGGER.debug("Content information tags {} provided. Using TagSpecification.", tags);
       spec = spec.and(ContentInformationTagSpecification.toSpecification(tags.toArray(new String[]{})));
     }
     return dao.findAll(spec, pgbl);
@@ -485,34 +493,34 @@ public class ContentInformationService implements IContentInformationService{
   @Override
   @Transactional
   public void patch(ContentInformation resource, JsonPatch patch, Collection<? extends GrantedAuthority> userGrants){
-    logger.trace("Performing patch({}, {}, {}).", "ContentInformation#" + resource.getId(), patch, userGrants);
+    LOGGER.trace("Performing patch({}, {}, {}).", "ContentInformation#" + resource.getId(), patch, userGrants);
     ContentInformation updated = PatchUtil.applyPatch(resource, patch, ContentInformation.class, userGrants);
-    logger.trace("Patch successfully applied.");
+    LOGGER.trace("Patch successfully applied.");
 
     long newVersion = auditService.getCurrentVersion(Long.toString(updated.getId())) + 1;
-    logger.trace("Setting new version number of content information to {}.", newVersion);
+    LOGGER.trace("Setting new version number of content information to {}.", newVersion);
     updated.setVersion((int) newVersion);
 
     ContentInformation result = getDao().save(updated);
-    logger.trace("Resource successfully persisted.");
+    LOGGER.trace("Resource successfully persisted.");
 
-    logger.trace("Capturing audit information.");
+    LOGGER.trace("Capturing audit information.");
     auditService.captureAuditInformation(result, AuthenticationHelper.getPrincipal());
 
-    logger.trace("Sending UPDATE event.");
+    LOGGER.trace("Sending UPDATE event.");
     messagingService.send(DataResourceMessage.factoryUpdateDataMessage(resource.getParentResource().getId(), updated.getRelativePath(), updated.getContentUri(), updated.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
   }
 
   @Override
   @Transactional
   public void delete(ContentInformation resource){
-    logger.trace("Performing delete({}).", "ContentInformation#" + resource.getId());
+    LOGGER.trace("Performing delete({}).", "ContentInformation#" + resource.getId());
     getDao().delete(resource);
 
-    logger.trace("Deleting audit information.");
+    LOGGER.trace("Deleting audit information.");
     auditService.deleteAuditInformation(Long.toString(resource.getId()), resource);
 
-    logger.trace("Sending DELETE event.");
+    LOGGER.trace("Sending DELETE event.");
     messagingService.send(DataResourceMessage.factoryDeleteDataMessage(resource.getParentResource().getId(), resource.getRelativePath(), resource.getContentUri(), resource.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
   }
 
@@ -522,7 +530,7 @@ public class ContentInformationService implements IContentInformationService{
 
   @Override
   public Health health(){
-    logger.trace("Obtaining health information.");
+    LOGGER.trace("Obtaining health information.");
     boolean repositoryPathAvailable = true;
     URL basePath = applicationProperties.getBasepath();
     try{
@@ -532,7 +540,7 @@ public class ContentInformationService implements IContentInformationService{
         probe = Files.createFile(probe);
         Files.write(probe, "Success".getBytes());
       } catch(Throwable t){
-        logger.error("Failed to check repository folder at " + basePath + ". Returning negative health status.", t);
+        LOGGER.error("Failed to check repository folder at " + basePath + ". Returning negative health status.", t);
         repositoryPathAvailable = false;
       } finally{
         try{
@@ -541,7 +549,7 @@ public class ContentInformationService implements IContentInformationService{
         }
       }
     } catch(URISyntaxException ex){
-      logger.error("Invalid base path uri of " + basePath + ".", ex);
+      LOGGER.error("Invalid base path uri of " + basePath + ".", ex);
       repositoryPathAvailable = false;
     }
     if(repositoryPathAvailable){

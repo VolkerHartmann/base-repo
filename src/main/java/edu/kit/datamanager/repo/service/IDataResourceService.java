@@ -19,6 +19,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.exceptions.BadArgumentException;
 import edu.kit.datamanager.exceptions.ResourceAlreadyExistException;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.service.IGenericService;
 import edu.kit.datamanager.service.IServiceAuditSupport;
 import java.time.Instant;
@@ -32,7 +33,11 @@ import org.springframework.data.domain.Pageable;
  * @author jejkal
  */
 public interface IDataResourceService extends IGenericService<DataResource>, IServiceAuditSupport, HealthIndicator{
-
+  /**
+   * Configure service
+   * @param repoBaseConfiguration configuration of the service.
+   */
+  public void configure(RepoBaseConfiguration repoBaseConfiguration);
   /**
    * Create a new data resource using the provided template. Where possible,
    * assigned fields of the provided resource are used. Other fields, e.g. the

@@ -71,7 +71,11 @@ public class PathUtils {
             throw new CustomInternalServerError("Failed to transform configured basepath to URI.");
         }
     }
-
+    /**
+     * Create path on base of actual date.
+     * @param properties
+     * @return 
+     */
     public static String substitutePathPattern(RepoBaseConfiguration properties) {
         Map<String, String> data = new HashMap<>();
         data.put("year", Integer.toString(Calendar.getInstance().get(Calendar.YEAR)));

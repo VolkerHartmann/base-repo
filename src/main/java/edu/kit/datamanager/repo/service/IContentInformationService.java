@@ -15,6 +15,7 @@
  */
 package edu.kit.datamanager.repo.service;
 
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.domain.ContentInformation;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.service.IGenericService;
@@ -31,6 +32,11 @@ import org.springframework.data.domain.Pageable;
  * @author jejkal
  */
 public interface IContentInformationService extends IGenericService<ContentInformation>, IServiceAuditSupport, HealthIndicator{
+  /**
+   * Configure service
+   * @param repoBaseConfiguration configuration of the service.
+   */
+  public void configure(RepoBaseConfiguration repoBaseConfiguration);
 
   /**
    * Create a new content information resource using the provided template. The

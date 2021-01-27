@@ -22,6 +22,7 @@ import edu.kit.datamanager.entities.RepoUserRole;
 import edu.kit.datamanager.exceptions.BadArgumentException;
 import edu.kit.datamanager.exceptions.ResourceAlreadyExistException;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
+import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.Agent;
 import edu.kit.datamanager.repo.domain.DataResource;
@@ -32,6 +33,8 @@ import edu.kit.datamanager.repo.domain.acl.AclEntry;
 import edu.kit.datamanager.repo.service.IDataResourceService;
 import edu.kit.datamanager.security.filter.JwtAuthenticationToken;
 import edu.kit.datamanager.util.AuthenticationHelper;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Calendar;
 import org.junit.After;
 import org.junit.Assert;
@@ -76,9 +79,18 @@ public class DataResourceServiceTest{
   private IDataResourceService service;
   @Autowired
   private IDataResourceDao dao;
+  
+  private RepoBaseConfiguration rbc;
 
   @Before
-  public void cleanDbBefore(){
+  public void cleanDbBefore() throws MalformedURLException{
+    //configure service
+    rbc = new RepoBaseConfiguration();
+    rbc.setBasepath(new URL("file:///tmp/repo-base"));
+    rbc.setPathPattern("@{year}/@{month}/@{day}");
+    rbc.setReadOnly(false);
+    rbc.setVersioning("none");
+    service.configure(rbc);
     try{
       dao.deleteAll();
       dao.flush();
