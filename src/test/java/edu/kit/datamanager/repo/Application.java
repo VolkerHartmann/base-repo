@@ -46,7 +46,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication
 @EnableScheduling
-@ComponentScan({"edu.kit.datamanager", "edu.kit.datamanager.repo.service.impl", "edu.kit.dataversioning", "edu.kit.datamanager.messaging.client"})
+@ComponentScan({"edu.kit.datamanager", "edu.kit.datamanager.repo.dao", "edu.kit.datamanager.repo.service.impl", "edu.kit.dataversioning", "edu.kit.datamanager.messaging.client"})
 public class Application {
 
 //  @Autowired

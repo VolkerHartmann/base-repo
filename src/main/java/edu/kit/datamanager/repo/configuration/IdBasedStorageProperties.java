@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Karlsruhe Institute of Technology.
+ * Copyright 2021 Karlsruhe Institute of Technology.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,39 +15,30 @@
  */
 package edu.kit.datamanager.repo.configuration;
 
-import edu.kit.datamanager.configuration.GenericApplicationProperties;
-import java.net.URL;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
 /**
- *
- * @author jejkal
+ * Split path in subdirectories based on the internal id.
+ * Remove '-' before splitting.
  */
 @Component
 @Data
 @Validated
 @RefreshScope
-@EqualsAndHashCode(callSuper = true)
-public class ApplicationProperties extends GenericApplicationProperties {
-
-    @edu.kit.datamanager.annotations.LocalFolderURL
-    @Value("${repo.basepath}")
-    private URL basepath;
-
-    @Value("${repo.readonly:FALSE}")
-    private boolean readOnly;
-
-    @Value("${repo.audit.enabled:FALSE}")
-    private boolean auditEnabled;
-    @Value("${repo.basepath.pattern:'@{year}'}")
-    private String pathPattern;
-    @Value("${repo.plugin.versioning:none}")
-    private String defaultVersioningService;
-    @Value("${repo.plugin.storage:dateBased}")
-    private String defaultStorageService;
+@ConfigurationProperties(prefix = "repo.plugin.storage.id")
+public class IdBasedStorageProperties {
+/**
+ * 
+ */
+    @Value("${repo.plugin.storage.id.charPerDirectory:4}")
+    private int charPerDirectory;
+    
+    @Value("${repo.plugin.storage.id.pathPattern:8")
+   private int maxDepth;
+    
 }

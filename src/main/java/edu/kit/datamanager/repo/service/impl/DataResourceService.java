@@ -65,6 +65,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -98,8 +99,8 @@ public class DataResourceService implements IDataResourceService {
   @Override
   public void configure(RepoBaseConfiguration applicationProperties) {
     this.applicationProperties = applicationProperties;
-    Javers javers = JaversBuilder.javers().build();
-    auditService = new DataResourceAuditService(javers, applicationProperties);
+    auditService = applicationProperties.getAuditService();
+    System.out.println("uuuuuuuuuuuuuuuuuuu " + (dao != null) + " - " + (messagingService != null) + " - " + (em != null));
   }
 
   @Override

@@ -45,6 +45,7 @@ public class DataResourceAuditService implements IAuditService<DataResource>{
   public DataResourceAuditService(Javers javers, RepoBaseConfiguration applicationProperties){
     this.javers = javers;
     this.applicationProperties = applicationProperties;
+    applicationProperties.setAuditService(this);
   }
 
   @Override

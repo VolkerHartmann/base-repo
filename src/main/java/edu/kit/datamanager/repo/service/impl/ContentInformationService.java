@@ -113,8 +113,7 @@ public class ContentInformationService implements IContentInformationService{
   @Override
   public void configure(RepoBaseConfiguration applicationProperties){
     this.applicationProperties = applicationProperties;
-    Javers javers = JaversBuilder.javers().build();
-    auditService = new ContentInformationAuditService(javers, applicationProperties);
+    auditService = applicationProperties.getContentInformationAuditService();
   }
 
   @Override
@@ -151,7 +150,7 @@ public class ContentInformationService implements IContentInformationService{
       LOGGER.trace("User upload detected. Preparing to consume data.");
       //file upload
 
-      String versioningService = (contentInformation != null && contentInformation.getVersioningService() != null) ? contentInformation.getVersioningService() : applicationProperties.getVersioning();
+      String versioningService = (contentInformation != null && contentInformation.getVersioningService() != null) ? contentInformation.getVersioningService() : applicationProperties.getVersioningService().getServiceName();
       contentInfo.setVersioningService(versioningService);
       boolean fileWritten = false;
       LOGGER.trace("Trying to use versioning service named '{}' for writing file content.", versioningService);

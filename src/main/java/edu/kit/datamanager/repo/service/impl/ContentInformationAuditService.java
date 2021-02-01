@@ -48,6 +48,7 @@ public class ContentInformationAuditService implements IAuditService<ContentInfo
   public ContentInformationAuditService(Javers javers, RepoBaseConfiguration applicationProperties){
     this.javers = javers;
     this.applicationProperties = applicationProperties;
+    applicationProperties.setContentInformationAuditService(this);
   }
 
   @Override

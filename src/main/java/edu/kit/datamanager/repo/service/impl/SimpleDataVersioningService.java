@@ -19,6 +19,7 @@ import edu.kit.datamanager.entities.VersionInfo;
 import edu.kit.datamanager.exceptions.CustomInternalServerError;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
 import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
+import edu.kit.datamanager.repo.configuration.SimpleVersioningProperties;
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.util.PathUtils;
@@ -61,7 +62,7 @@ public class SimpleDataVersioningService implements IRepoVersioningService{
   @Override
   public void configure(RepoBaseConfiguration applicationProperties){
     this.applicationProperties = applicationProperties;
-  }
+   }
 
   @Override
   public void write(String resourceId, String callerId, String path, InputStream stream, Map<String, String> map){

@@ -16,8 +16,10 @@
 package edu.kit.datamanager.repo.test;
 
 import edu.kit.datamanager.exceptions.CustomInternalServerError;
+import edu.kit.datamanager.repo.configuration.DateBasedStorageProperties;
 import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
 import edu.kit.datamanager.repo.domain.DataResource;
+import edu.kit.datamanager.repo.service.impl.DateBasedStorageService;
 import edu.kit.datamanager.repo.util.PathUtils;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -43,7 +45,13 @@ public class PathUtilsTest {
         RepoBaseConfiguration props = new RepoBaseConfiguration();
         //test with trailing slash 
         props.setBasepath(new URL("file:///tmp/"));
-        props.setPathPattern("@{year}");
+      DateBasedStorageService dateBasedStorageService = new DateBasedStorageService();
+      // configure service
+      DateBasedStorageProperties dbsp = new DateBasedStorageProperties();
+      dbsp.setPathPattern("@{year}");
+      dateBasedStorageService.configure(dbsp);
+      // set storage service.
+      props.setStorageService(dateBasedStorageService);
 
         Assert.assertTrue(PathUtils.getDataUri(resource, "folder/file.txt", props).toString().startsWith("file:/tmp/" + currentYear + "/test123/folder/file.txt_"));
         //test w/o trailing slash

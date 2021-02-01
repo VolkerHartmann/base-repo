@@ -31,11 +31,16 @@ import edu.kit.datamanager.repo.domain.Title;
 import edu.kit.datamanager.repo.domain.UnknownInformationConstants;
 import edu.kit.datamanager.repo.domain.acl.AclEntry;
 import edu.kit.datamanager.repo.service.IDataResourceService;
+import edu.kit.datamanager.repo.service.impl.DataResourceAuditService;
+import edu.kit.datamanager.repo.service.impl.DateBasedStorageService;
+import edu.kit.datamanager.repo.service.impl.NoneDataVersioningService;
 import edu.kit.datamanager.security.filter.JwtAuthenticationToken;
 import edu.kit.datamanager.util.AuthenticationHelper;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Calendar;
+import org.javers.core.Javers;
+import org.javers.core.JaversBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -73,44 +78,46 @@ import org.springframework.test.context.transaction.TransactionalTestExecutionLi
   TransactionalTestExecutionListener.class
 })
 @ActiveProfiles("test")
-public class DataResourceServiceTest{
+public class DataResourceServiceTest {
 
   @Autowired
   private IDataResourceService service;
   @Autowired
   private IDataResourceDao dao;
-  
+
   private RepoBaseConfiguration rbc;
 
   @Before
-  public void cleanDbBefore() throws MalformedURLException{
+  public void cleanDbBefore() throws MalformedURLException {
     //configure service
     rbc = new RepoBaseConfiguration();
     rbc.setBasepath(new URL("file:///tmp/repo-base"));
-    rbc.setPathPattern("@{year}/@{month}/@{day}");
+    rbc.setStorageService(new DateBasedStorageService());
     rbc.setReadOnly(false);
-    rbc.setVersioning("none");
+    rbc.setVersioningService(new NoneDataVersioningService());
+    Javers javers = JaversBuilder.javers().build();
+    rbc.setAuditService(new DataResourceAuditService(javers, rbc));
     service.configure(rbc);
-    try{
+    try {
       dao.deleteAll();
       dao.flush();
-    } catch(Throwable t){
+    } catch (Throwable t) {
       t.printStackTrace();
     }
   }
 
   @After
-  public void cleanDbAfter(){
-    try{
+  public void cleanDbAfter() {
+    try {
       dao.deleteAll();
       dao.flush();
-    } catch(Throwable t){
+    } catch (Throwable t) {
       t.printStackTrace();
     }
   }
 
   @Test
-  public void testCreateWithTitleAndType(){
+  public void testCreateWithTitleAndType() {
     DataResource resource = createResourceWithDoi("testDoi1", "MyResource", "SimpleResource");
     resource.setState(DataResource.State.VOLATILE);
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
@@ -148,7 +155,7 @@ public class DataResourceServiceTest{
   }
 
   @Test
-  public void testIdAssignment(){
+  public void testIdAssignment() {
     //test with doi
     DataResource resource = createResourceWithDoi("testDoi2", "MyResource", "SimpleResource");
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
@@ -181,10 +188,10 @@ public class DataResourceServiceTest{
     resource = createResourceWithoutDoi("internalId", "MyResource", "SimpleResource");
     resource.getAlternateIdentifiers().clear();
     resource.getAlternateIdentifiers().add(Identifier.factoryInternalIdentifier(null));
-    try{
+    try {
       resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
       Assert.fail("Test should have failed already, but resource " + resource + " has been created.");
-    } catch(BadArgumentException ex){
+    } catch (BadArgumentException ex) {
     }
 
     //test without any identifier
@@ -202,7 +209,7 @@ public class DataResourceServiceTest{
   }
 
   @Test
-  public void testFindById(){
+  public void testFindById() {
     DataResource resource = createResourceWithDoi("simpleDoi", "MyResource", "SimpleResource");
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
     DataResource found = service.findById("simpleDoi");
@@ -211,13 +218,13 @@ public class DataResourceServiceTest{
   }
 
   @Test(expected = ResourceNotFoundException.class)
-  public void testFindByUnknownId(){
+  public void testFindByUnknownId() {
     DataResource found = service.findById("NotExist");
     Assert.fail("Test should have failed already.");
   }
 
   @Test(expected = ResourceAlreadyExistException.class)
-  public void testDoubleResourceRegistration(){
+  public void testDoubleResourceRegistration() {
     DataResource resource = createResourceWithDoi("testDoi3", "MyResource", "SimpleResource");
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
@@ -225,14 +232,14 @@ public class DataResourceServiceTest{
   }
 
   @Test(expected = BadArgumentException.class)
-  public void testCreateWithoutTitle(){
+  public void testCreateWithoutTitle() {
     DataResource resource = createResourceWithDoi("testDoi4", null, null);
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
     Assert.fail("Test should have failed already, but resource " + resource + " has been created.");
   }
 
   @Test
-  public void testCreateResourceWithCreators(){
+  public void testCreateResourceWithCreators() {
     DataResource resource = createResourceWithDoi("testDoi5", "My Resource", "SimpleResource");
     resource.getCreators().add(Agent.factoryAgent("test", "user"));
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
@@ -250,7 +257,7 @@ public class DataResourceServiceTest{
 
   @Test
   @Ignore
-  public void testCreateResourceWithWithFullAuthentication() throws JsonProcessingException{
+  public void testCreateResourceWithWithFullAuthentication() throws JsonProcessingException {
     mockJwtUserAuthentication();
     DataResource resource = createResourceWithDoi("testDoi6", "My Resource", "SimpleResource");
     resource = service.create(resource, "tester", "test", "user");
@@ -268,41 +275,41 @@ public class DataResourceServiceTest{
   }
 
   @Test(expected = BadArgumentException.class)
-  public void testCreateWithTitleAndWithoutType(){
+  public void testCreateWithTitleAndWithoutType() {
     DataResource resource = createResourceWithDoi("testDoi7", "MyResource", null);
     resource = service.create(resource, AuthenticationHelper.ANONYMOUS_USER_PRINCIPAL);
     Assert.fail("Test should have failed already, but resource " + resource + " has been created.");
   }
 
-  private DataResource createResourceWithDoi(String pid, String title, String type){
+  private DataResource createResourceWithDoi(String pid, String title, String type) {
     DataResource resource;
 
     resource = DataResource.factoryDataResourceWithDoi(pid);
 
-    if(title != null){
+    if (title != null) {
       resource.getTitles().add(Title.factoryTitle(title, Title.TYPE.TRANSLATED_TITLE));
     }
-    if(type != null){
+    if (type != null) {
       resource.setResourceType(ResourceType.createResourceType(type));
     }
     return resource;
   }
 
-  private DataResource createResourceWithoutDoi(String iid, String title, String type){
+  private DataResource createResourceWithoutDoi(String iid, String title, String type) {
     DataResource resource;
 
     resource = DataResource.factoryNewDataResource(iid);
 
-    if(title != null){
+    if (title != null) {
       resource.getTitles().add(Title.factoryTitle(title, Title.TYPE.TRANSLATED_TITLE));
     }
-    if(type != null){
+    if (type != null) {
       resource.setResourceType(ResourceType.createResourceType(type));
     }
     return resource;
   }
 
-  private void mockJwtUserAuthentication() throws JsonProcessingException{
+  private void mockJwtUserAuthentication() throws JsonProcessingException {
     JwtAuthenticationToken userToken = edu.kit.datamanager.util.JwtBuilder.
             createUserToken("tester", RepoUserRole.ADMINISTRATOR).
             addSimpleClaim("firstname", "test").

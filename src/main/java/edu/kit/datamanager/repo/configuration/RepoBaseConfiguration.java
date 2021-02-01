@@ -15,7 +15,13 @@
  */
 package edu.kit.datamanager.repo.configuration;
 
+import edu.kit.datamanager.repo.dao.IDataResourceDao;
+import edu.kit.datamanager.repo.domain.DataResource;
+import edu.kit.datamanager.repo.service.IRepoStorageService;
+import edu.kit.datamanager.repo.service.IRepoVersioningService;
+import edu.kit.datamanager.repo.service.impl.ContentInformationAuditService;
 import edu.kit.datamanager.repo.service.impl.NoneDataVersioningService;
+import edu.kit.datamanager.service.IAuditService;
 import java.net.URL;
 
 /**
@@ -28,15 +34,6 @@ public class RepoBaseConfiguration {
    */
   private URL basepath;
   /**
-   * Which version method to use.
-   */
-  private String versioning;
-  /**
-   * Which path pattern should be used.
-   */
-  //private FileHierarchy hierarchy;
-  private String pathPattern;
-  /**
    * Repo is read only or not.
    */
   private boolean readOnly;
@@ -44,6 +41,26 @@ public class RepoBaseConfiguration {
    * Versioning is supported or not.
    */
   private boolean auditEnabled;
+  /**
+   * Versioning service for data resource.
+   */
+  private IRepoVersioningService versioningService;
+  /**
+   * Versioning service for data resource.
+   */
+  private IRepoStorageService storageService;
+  /**
+   * Auditservice for data resource.
+   */
+  private IAuditService<DataResource> auditService;
+  /**
+   * Content information service
+   */
+  private ContentInformationAuditService contentInformationAuditService;
+  /**
+   * Access to data resource db.
+   */
+  private IDataResourceDao dao;
 
   /**
    * If versioning is available or not.
@@ -66,21 +83,6 @@ public class RepoBaseConfiguration {
    */
   public void setBasepath(URL basePath) {
     this.basepath = basePath;
-  }
-
-  /**
-   * @return the versioning
-   */
-  public String getVersioning() {
-    return versioning;
-  }
-
-  /**
-   * @param versioning the versioning to set
-   */
-  public void setVersioning(String versioning) {
-    this.versioning = versioning;
-    auditEnabled = new NoneDataVersioningService().getServiceName().equals(versioning);
   }
 
 //  /**
@@ -109,19 +111,61 @@ public class RepoBaseConfiguration {
   public void setReadOnly(boolean readOnly) {
     this.readOnly = readOnly;
   }
-
   /**
-   * @return the pathPattern
+   * @return the auditService
    */
-  public String getPathPattern() {
-    return pathPattern;
+  public IAuditService<DataResource> getAuditService() {
+    return auditService;
   }
 
   /**
-   * @param pathPattern the pathPattern to set
+   * @param auditService the auditService to set
    */
-  public void setPathPattern(String pathPattern) {
-    this.pathPattern = pathPattern;
+  public void setAuditService(IAuditService<DataResource> auditService) {
+    this.auditService = auditService;
+  }
+
+  /**
+   * @return the contentInformationService
+   */
+  public ContentInformationAuditService getContentInformationAuditService() {
+    return contentInformationAuditService;
+  }
+
+  /**
+   * @param contentInformationAuditService the contentInformationService to set
+   */
+  public void setContentInformationAuditService(ContentInformationAuditService contentInformationAuditService) {
+    this.contentInformationAuditService = contentInformationAuditService;
+  }
+
+  /**
+   * @return the versioningService
+   */
+  public IRepoVersioningService getVersioningService() {
+    return versioningService;
+  }
+
+  /**
+   * @param versioningService the versioningService to set
+   */
+  public void setVersioningService(IRepoVersioningService versioningService) {
+    this.versioningService = versioningService;
+    auditEnabled = new NoneDataVersioningService().getServiceName().equals(versioningService.getServiceName());
+ }
+
+  /**
+   * @return the storageService
+   */
+  public IRepoStorageService getStorageService() {
+    return storageService;
+  }
+
+  /**
+   * @param storageService the storageService to set
+   */
+  public void setStorageService(IRepoStorageService storageService) {
+    this.storageService = storageService;
   }
 
 }

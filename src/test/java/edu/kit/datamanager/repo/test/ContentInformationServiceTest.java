@@ -27,10 +27,16 @@ import edu.kit.datamanager.repo.domain.ResourceType;
 import edu.kit.datamanager.repo.domain.Title;
 import edu.kit.datamanager.repo.service.IContentInformationService;
 import edu.kit.datamanager.repo.service.IDataResourceService;
+import edu.kit.datamanager.repo.service.impl.ContentInformationAuditService;
+import edu.kit.datamanager.repo.service.impl.DataResourceAuditService;
+import edu.kit.datamanager.repo.service.impl.DateBasedStorageService;
+import edu.kit.datamanager.repo.service.impl.NoneDataVersioningService;
 import edu.kit.datamanager.util.AuthenticationHelper;
 import java.io.ByteArrayInputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import org.javers.core.Javers;
+import org.javers.core.JaversBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -84,9 +90,13 @@ public class ContentInformationServiceTest{
     //configure service
     RepoBaseConfiguration rbc = new RepoBaseConfiguration();
     rbc.setBasepath(new URL("file:///tmp/repo-base"));
-    rbc.setPathPattern("@{year}/@{month}/@{day}");
+    rbc.setVersioningService(new NoneDataVersioningService());
+    rbc.setStorageService(new DateBasedStorageService());
     rbc.setReadOnly(false);
-    rbc.setVersioning("none");
+       Javers javers = JaversBuilder.javers().build();
+    rbc.setAuditService(new DataResourceAuditService(javers, rbc));
+    rbc.setContentInformationAuditService(new ContentInformationAuditService(javers, rbc));
+
     service.configure(rbc);
     dataResourceService.configure(rbc);
     
