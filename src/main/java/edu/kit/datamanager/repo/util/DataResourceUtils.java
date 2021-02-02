@@ -41,6 +41,43 @@ public class DataResourceUtils{
 
   private DataResourceUtils(){
   }
+  /** 
+   * Create a new data resource.
+   * @return 
+   */
+  public static DataResource createResource() {
+    DataResource newDataResource;
+    return newDataResource;
+  }
+  /**
+   * Read an existing resource.
+   * @param alternateId 
+   * @return 
+   */
+  public static DataResource readResource(String alternateId) {
+    DataResource newDataResource;
+    return newDataResource;
+  }
+  /**
+   * Updata an existing resource.
+   * @param newResource
+   * @return 
+   */
+  public static DataResource updateResource(DataResource newResource) {
+    DataResource newDataResource;
+    return newDataResource;
+  }
+   /**
+   * Delete an existing resource.
+   * @param newResource
+   * @return 
+   */
+  public static DataResource deleteResource(DataResource newResource) {
+    DataResource newDataResource;
+    return newDataResource;
+  }
+ 
+  
 
   public static String getInternalIdentifier(DataResource resource){
     for(Identifier alt : resource.getAlternateIdentifiers()){
