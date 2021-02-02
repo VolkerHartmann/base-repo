@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.kit.datamanager.repo.service.impl;
+package edu.kit.datamanager.service.impl;
 
 import edu.kit.datamanager.entities.ContentElement;
 import edu.kit.datamanager.exceptions.CustomInternalServerError;
 import edu.kit.datamanager.repo.service.IRepoVersioningService;
 import edu.kit.datamanager.service.IContentProvider;
-import edu.kit.datamanager.service.IVersioningService;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;

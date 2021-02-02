@@ -124,6 +124,13 @@ public class DataResourceController implements IDataResourceController {
     this.javers = javers;
     this.dataResourceService = dataResourceService;
     this.contentInformationService = contentInformationService;
+    System.out.println("zzzzzzzzz");
+    System.out.println("ap - " + applicationProperties);
+    System.out.println("jav - " + javers);
+    System.out.println("dataResource - " + dataResourceService);
+    System.out.println("content - " + contentInformationService);
+    System.out.println("version - " + versioningServices);
+    System.out.println("storage - " + storageServices);
     RepoBaseConfiguration rbc = new RepoBaseConfiguration();
     rbc.setBasepath(applicationProperties.getBasepath());
     rbc.setReadOnly(applicationProperties.isReadOnly());
@@ -141,8 +148,8 @@ public class DataResourceController implements IDataResourceController {
         break;
       }
     }
-    auditService = new DataResourceAuditService(javers, rbc);
-    contentAuditService = new ContentInformationAuditService(javers, rbc);
+    auditService = new DataResourceAuditService(this.javers, rbc);
+    contentAuditService = new ContentInformationAuditService(this.javers, rbc);
 //    dataResourceService = new DataResourceService();
     dataResourceService.configure(rbc);
 //    contentInformationService = new ContentInformationService();

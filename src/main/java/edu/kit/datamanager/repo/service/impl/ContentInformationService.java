@@ -114,6 +114,7 @@ public class ContentInformationService implements IContentInformationService{
   public void configure(RepoBaseConfiguration applicationProperties){
     this.applicationProperties = applicationProperties;
     auditService = applicationProperties.getContentInformationAuditService();
+    System.out.println("zzzzzzContentInformation - " + versioningServices);
   }
 
   @Override
