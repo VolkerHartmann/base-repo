@@ -29,6 +29,6 @@ import org.springframework.validation.annotation.Validated;
 @RefreshScope
 public class SimpleVersioningProperties {
 
-    @Value("${repo.plugin.storage.date:'@{year}'}")
-    private String pathPattern;
+    @Value("${repo.plugin.versioning.simple.time:'ignore'}")
+    private String time;
 }

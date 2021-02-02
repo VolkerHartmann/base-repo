@@ -30,7 +30,6 @@ import org.springframework.validation.annotation.Validated;
 @Data
 @Validated
 @RefreshScope
-@ConfigurationProperties(prefix = "repo.plugin.storage.id")
 public class IdBasedStorageProperties {
 /**
  * 
@@ -38,7 +37,7 @@ public class IdBasedStorageProperties {
     @Value("${repo.plugin.storage.id.charPerDirectory:4}")
     private int charPerDirectory;
     
-    @Value("${repo.plugin.storage.id.pathPattern:8")
+    @Value("${repo.plugin.storage.id.pathPattern:8}")
    private int maxDepth;
     
 }

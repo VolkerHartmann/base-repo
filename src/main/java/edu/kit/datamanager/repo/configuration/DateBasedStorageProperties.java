@@ -28,7 +28,7 @@ import org.springframework.validation.annotation.Validated;
 @Data
 @Validated
 @RefreshScope
-@ConfigurationProperties(prefix = "repo.plugin.storage.date")
+//@ConfigurationProperties(prefix = "repo.plugin.storage.date")
 public class DateBasedStorageProperties {
 
     @Value("${repo.plugin.storage.date.pathPattern:'@{year}'}")

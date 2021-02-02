@@ -45,7 +45,6 @@ import edu.kit.datamanager.repo.service.impl.ContentInformationAuditService;
 import edu.kit.datamanager.repo.service.impl.DataResourceAuditService;
 import edu.kit.datamanager.repo.util.DataResourceUtils;
 import edu.kit.datamanager.service.IAuditService;
-import edu.kit.datamanager.service.IVersioningService;
 import edu.kit.datamanager.util.AuthenticationHelper;
 import edu.kit.datamanager.util.ControllerUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -67,6 +66,7 @@ import java.util.function.Function;
 import org.apache.http.client.utils.URIBuilder;
 import org.javers.core.Javers;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -94,7 +94,7 @@ public class DataResourceController implements IDataResourceController {
 
   // private final JsonResult json = JsonResult.instance();
   @Autowired
-  private Logger LOGGER;
+  private Logger LOGGER = LoggerFactory.getLogger(DataResourceController.class);;
   @Autowired
   private final Javers javers;
   @Autowired
@@ -109,28 +109,34 @@ public class DataResourceController implements IDataResourceController {
   private IRepoVersioningService[] versioningServices;
   @Autowired
   private IRepoStorageService[] storageServices;
-  
-  
 
   private final IAuditService<DataResource> auditService;
   private final IAuditService<ContentInformation> contentAuditService;
 
-  /**
-   *
-   * @param applicationProperties
-   */
-  public DataResourceController(ApplicationProperties applicationProperties, Javers javers, IDataResourceService dataResourceService, IContentInformationService contentInformationService, ApplicationEventPublisher eventPublisher) {
+   /**
+    * 
+    * @param applicationProperties
+    * @param javers
+    * @param dataResourceService
+    * @param contentInformationService
+    * @param versioningServices
+    * @param storageServices
+    * @param eventPublisher 
+    */
+  public DataResourceController(ApplicationProperties applicationProperties,
+          Javers javers,
+          IDataResourceService dataResourceService,
+          IContentInformationService contentInformationService,
+          IRepoVersioningService[] versioningServices,
+          IRepoStorageService[] storageServices,
+          ApplicationEventPublisher eventPublisher
+  ) {
     this.applicationProperties = applicationProperties;
     this.javers = javers;
     this.dataResourceService = dataResourceService;
     this.contentInformationService = contentInformationService;
-    System.out.println("zzzzzzzzz");
-    System.out.println("ap - " + applicationProperties);
-    System.out.println("jav - " + javers);
-    System.out.println("dataResource - " + dataResourceService);
-    System.out.println("content - " + contentInformationService);
-    System.out.println("version - " + versioningServices);
-    System.out.println("storage - " + storageServices);
+    this.versioningServices = versioningServices;
+    this.storageServices = storageServices;
     RepoBaseConfiguration rbc = new RepoBaseConfiguration();
     rbc.setBasepath(applicationProperties.getBasepath());
     rbc.setReadOnly(applicationProperties.isReadOnly());
@@ -154,6 +160,7 @@ public class DataResourceController implements IDataResourceController {
     dataResourceService.configure(rbc);
 //    contentInformationService = new ContentInformationService();
     contentInformationService.configure(rbc);
+
     if (!this.applicationProperties.isAuditEnabled() && !"none".equals(this.applicationProperties.getDefaultVersioningService())) {
       throw new IllegalArgumentException("Conflicting configuration properties detected. 'repo.audit.enabled' must be 'true' if 'repo.file.versioning.default' is not 'none'.");
     }
@@ -183,6 +190,13 @@ public class DataResourceController implements IDataResourceController {
   public ResponseEntity<DataResource> create(@RequestBody final DataResource resource,
           final WebRequest request,
           final HttpServletResponse response) {
+    System.out.println("zzzz33333");
+    System.out.println("ap - " + applicationProperties);
+    System.out.println("jav - " + javers);
+    System.out.println("dataResource - " + dataResourceService);
+    System.out.println("content - " + contentInformationService);
+    System.out.println("version - " + versioningServices);
+    System.out.println("storage - " + storageServices);
     if (applicationProperties.isReadOnly()) {
       LOGGER.info("Repository is in read-only mode. Create request denied.");
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();

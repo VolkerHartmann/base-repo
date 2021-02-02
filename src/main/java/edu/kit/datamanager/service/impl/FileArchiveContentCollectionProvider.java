@@ -17,6 +17,7 @@ package edu.kit.datamanager.service.impl;
 
 import edu.kit.datamanager.entities.ContentElement;
 import edu.kit.datamanager.exceptions.CustomInternalServerError;
+import edu.kit.datamanager.repo.service.IRepoVersioningService;
 import edu.kit.datamanager.service.IContentCollectionProvider;
 import edu.kit.datamanager.service.IVersioningService;
 import java.util.Arrays;
@@ -45,7 +46,7 @@ public class FileArchiveContentCollectionProvider implements IContentCollectionP
 
   public final static MediaType ZIP_MEDIA_TYPE = MediaType.parseMediaType("application/zip");
   @Autowired(required = false)
-  private IVersioningService[] versioningServices;
+  private IRepoVersioningService[] versioningServices;
 
   @Override
   public void provide(@NotEmpty List<ContentElement> collection, MediaType mediaType, HttpServletResponse response){
@@ -79,9 +80,8 @@ public class FileArchiveContentCollectionProvider implements IContentCollectionP
         LOGGER.trace("Writing element to zip stream.");
         zippedOut.putNextEntry(e);
 
-        for(IVersioningService versioningService : versioningServices){
+        for(IRepoVersioningService versioningService : versioningServices){
           if(element.getVersioningService().equals(versioningService.getServiceName())){
-            versioningService.configure();
 
             Map<String, String> options = new HashMap<>();
             options.put("contentUri", element.getContentUri());

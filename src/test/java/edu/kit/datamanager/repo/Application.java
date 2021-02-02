@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.kit.datamanager.repo.configuration.ApplicationProperties;
+import edu.kit.datamanager.repo.configuration.DateBasedStorageProperties;
+import edu.kit.datamanager.repo.configuration.IdBasedStorageProperties;
 import edu.kit.datamanager.repo.service.IContentInformationService;
 import edu.kit.datamanager.repo.service.impl.DataResourceService;
 import edu.kit.datamanager.repo.service.IDataResourceService;
@@ -102,6 +104,14 @@ public class Application {
     @ConfigurationProperties("repo")
     public ApplicationProperties applicationProperties() {
         return new ApplicationProperties();
+    }
+    @Bean
+    public IdBasedStorageProperties idBasedStorageProperties() {
+        return new IdBasedStorageProperties();
+    }
+    @Bean
+    public DateBasedStorageProperties dateBasedStorageProperties() {
+        return new DateBasedStorageProperties();
     }
 
     @Bean

@@ -48,9 +48,9 @@ public class PathUtils {
    * not touched until the transfer has finished. After the transfer has
    * finished, previously existing data can be removed securely.
    *
-   * @param relativeDataPath The relative data path used to access the data.
    * @param parentResource The parent data resource.
-   * @param basePath The base path of the repo. data base path.
+   * @param relativeDataPath The relative data path used to access the data.
+   * @param properties All properties of the repository.
    *
    * @return The data URI.
    */
