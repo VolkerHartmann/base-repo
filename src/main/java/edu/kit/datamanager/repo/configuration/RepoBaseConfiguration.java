@@ -17,12 +17,15 @@ package edu.kit.datamanager.repo.configuration;
 
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.DataResource;
+import edu.kit.datamanager.repo.service.IContentInformationService;
+import edu.kit.datamanager.repo.service.IDataResourceService;
 import edu.kit.datamanager.repo.service.IRepoStorageService;
 import edu.kit.datamanager.repo.service.IRepoVersioningService;
 import edu.kit.datamanager.repo.service.impl.ContentInformationAuditService;
 import edu.kit.datamanager.repo.service.impl.NoneDataVersioningService;
 import edu.kit.datamanager.service.IAuditService;
 import java.net.URL;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Holds all properties needed to manage data resources.
@@ -50,10 +53,18 @@ public class RepoBaseConfiguration {
    */
   private IRepoStorageService storageService;
   /**
+   * Service for data resource.
+   */
+   private IDataResourceService dataResourceService;
+   /** 
+    * Service for content information.
+    */
+  private IContentInformationService contentInformationService;
+  /**
    * Auditservice for data resource.
    */
   private IAuditService<DataResource> auditService;
-  /**
+ /**
    * Content information service
    */
   private ContentInformationAuditService contentInformationAuditService;
@@ -61,8 +72,11 @@ public class RepoBaseConfiguration {
    * Access to data resource db.
    */
   private IDataResourceDao dao;
-
-  /**
+  /** 
+   * EventPublisher.
+   */
+   private ApplicationEventPublisher eventPublisher;
+ /**
    * If versioning is available or not.
    *
    * @return true or false.
@@ -166,6 +180,48 @@ public class RepoBaseConfiguration {
    */
   public void setStorageService(IRepoStorageService storageService) {
     this.storageService = storageService;
+  }
+
+  /**
+   * @return the dataResourceService
+   */
+  public IDataResourceService getDataResourceService() {
+    return dataResourceService;
+  }
+
+  /**
+   * @param dataResourceService the dataResourceService to set
+   */
+  public void setDataResourceService(IDataResourceService dataResourceService) {
+    this.dataResourceService = dataResourceService;
+  }
+
+  /**
+   * @return the eventPublisher
+   */
+  public ApplicationEventPublisher getEventPublisher() {
+    return eventPublisher;
+  }
+
+  /**
+   * @param eventPublisher the eventPublisher to set
+   */
+  public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
+    this.eventPublisher = eventPublisher;
+  }
+
+  /**
+   * @return the contentInformationService
+   */
+  public IContentInformationService getContentInformationService() {
+    return contentInformationService;
+  }
+
+  /**
+   * @param contentInformationService the contentInformationService to set
+   */
+  public void setContentInformationService(IContentInformationService contentInformationService) {
+    this.contentInformationService = contentInformationService;
   }
 
 }

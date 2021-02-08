@@ -114,7 +114,6 @@ public class ContentInformationService implements IContentInformationService{
   public void configure(RepoBaseConfiguration applicationProperties){
     this.applicationProperties = applicationProperties;
     auditService = applicationProperties.getContentInformationAuditService();
-    System.out.println("zzzzzzContentInformation - " + versioningServices);
   }
 
   @Override
@@ -374,7 +373,7 @@ public class ContentInformationService implements IContentInformationService{
       Optional<ContentInformation> optAuditResult = auditService.getResourceByVersion(Long.toString(result.getId()), version);
       if(optAuditResult.isPresent()){
         LOGGER.trace("Shadow successfully obtained. Returning version {} of content information with id {}.", version, result.getId());
-        return optAuditResult.get();
+        result = optAuditResult.get();
       } else{
         LOGGER.info("Version {} of content information {} not found. Returning HTTP 404 (NOT_FOUND).", version, result.getId());
         throw new ResourceNotFoundException("Content information with identifier " + result.getId() + " is not available in version " + version + ".");

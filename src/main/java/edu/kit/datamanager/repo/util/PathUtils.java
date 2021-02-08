@@ -80,10 +80,10 @@ public class PathUtils {
    */
   public static String substitutePathPattern(DataResource resource, RepoBaseConfiguration properties) {
     String substitutePath = "dump";
-    IRepoStorageService versioningService = properties.getStorageService();
-    if (versioningService != null) {
+    IRepoStorageService storageService = properties.getStorageService();
+    if (storageService != null) {
       LOGGER.trace("Repo storage service found. Building relative path.");
-      substitutePath = versioningService.createPath(resource);
+      substitutePath = storageService.createPath(resource);
     }
     return substitutePath;
   }

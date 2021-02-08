@@ -100,7 +100,6 @@ public class DataResourceService implements IDataResourceService {
   public void configure(RepoBaseConfiguration applicationProperties) {
     this.applicationProperties = applicationProperties;
     auditService = applicationProperties.getAuditService();
-    System.out.println("uuuuuuuuuuuuuuuuuuu " + (dao != null) + " - " + (messagingService != null) + " - " + (em != null));
   }
 
   @Override
