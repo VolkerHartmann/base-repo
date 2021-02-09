@@ -148,16 +148,28 @@ public class DataResourceService implements IDataResourceService {
           }
           logger.debug("Setting resource identifier to provided internal identifier with value {}.", alt.getValue());
           resource.setId(alt.getValue());
+          testForConflictingIdentifiers(resource);
           hasAlternateInternalIdentifier = true;
           break;
         }
       }
 
       if (!hasAlternateInternalIdentifier) {
-        String altId = UUID.randomUUID().toString();
-        logger.debug("No primary identifier assigned to resource and no alternate identifier of type INTERNAL was found. Assigning alternate INTERNAL identifier {}.", altId);
-        resource.getAlternateIdentifiers().add(Identifier.factoryInternalIdentifier(altId));
-        resource.setId(altId);
+        boolean success = false;
+        // Test a maximum of 10 times for a new UUID
+        for (int tryToFindIdentifier = 0; !success && (tryToFindIdentifier < 10); tryToFindIdentifier++) {
+          String altId = UUID.randomUUID().toString();
+          
+          logger.debug("No primary identifier assigned to resource and no alternate identifier of type INTERNAL was found. Assigning alternate INTERNAL identifier {}.", altId);
+          resource.getAlternateIdentifiers().add(Identifier.factoryInternalIdentifier(altId));
+          resource.setId(altId);
+          try {
+            testForConflictingIdentifiers(resource);
+            success = true;
+          } catch (Throwable tw) {
+            // do nothing
+          }
+        }
       }
     } else {
       logger.debug("Primary or other identifier found. Setting resource identifier to primary identifier {}.", resource.getIdentifier().getValue());
@@ -592,16 +604,30 @@ public class DataResourceService implements IDataResourceService {
     after.removeAll(before);
     logger.trace("Remaining new or updated resource identifiers: {}", after);
 
-    if (after.isEmpty()) {
+    checkUniqueIdentifiers(after);
+  }
+
+  /**
+   * Check if there is a resource identified with one identifiers from list
+   * 'after' not in 'before'. If at least one resource was found, a
+   * ResourceAlreadyExistsException is throws avoiding any update of the
+   * resource with the new list of identifiers.
+   *
+   * @param newIdentifiers The list of unique identifiers before an update.
+   */
+  private void checkUniqueIdentifiers(List<String> newIdentifiers) {
+    logger.trace("Check for new or updated resource identifiers: {}", newIdentifiers);
+
+    if (newIdentifiers.isEmpty()) {
       return;
     }
-    String[] afterList = after.toArray(new String[]{});
+    String[] afterList = newIdentifiers.toArray(new String[]{});
     logger.trace("Checking for conflicting identifiers.");
     long cnt = getDao().count(PrimaryIdentifierSpec.toSpecification(afterList).or(AlternateIdentifierSpec.toSpecification(afterList).or(InternalIdentifierSpec.toSpecification(afterList))));
     logger.trace("Found {} resources conflicting with at least one identifier of: {}.", cnt, afterList);
     if (cnt > 0) {
-      logger.error("Number of conflicting identifiers with identifiers {} is neq 0. Throwing ResourceAlreadyExistException.", after);
-      throw new ResourceAlreadyExistException("There is at least one resource with one of the following identifiers: " + after);
+      logger.error("Number of conflicting identifiers with identifiers {} is neq 0. Throwing ResourceAlreadyExistException.", newIdentifiers);
+      throw new ResourceAlreadyExistException("There is at least one resource with one of the following identifiers: " + newIdentifiers);
     }
     logger.trace("No identifier conflict detected. Persisting resource.");
   }
@@ -639,6 +665,11 @@ public class DataResourceService implements IDataResourceService {
   public Health health() {
     logger.trace("Obtaining health information.");
     return Health.up().withDetail("DataResources", getDao().count()).withDetail("Audit enabled?", applicationProperties.isAuditEnabled()).build();
+  }
+
+  public void testForConflictingIdentifiers(DataResource newResource) {
+    List<String> uniqueIdentifiers = getUniqueIdentifiers(newResource);
+    checkUniqueIdentifiers(uniqueIdentifiers);
   }
 
 }
