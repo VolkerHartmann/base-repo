@@ -54,8 +54,6 @@ public class SimpleDataVersioningService implements IRepoVersioningService{
 
   @Autowired
   private Logger logger;
-  @Autowired
-  private IContentInformationDao dao;
 
   private RepoBaseConfiguration applicationProperties;
 

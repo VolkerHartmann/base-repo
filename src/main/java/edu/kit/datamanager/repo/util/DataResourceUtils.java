@@ -252,6 +252,22 @@ public class DataResourceUtils {
           String identifier,
           final WebRequest request,
           Function<String, String> supplier) {
+    String etagFromHeader = ControllerUtils.getEtagFromHeader(request);
+    deleteResource(applicationProperties, identifier, etagFromHeader, supplier);
+  }
+
+  /**
+   * Delete an existing resource.
+   *
+   * @param applicationProperties
+   * @param identifier
+   * @param eTag
+   * @param supplier
+   */
+  public static void deleteResource(RepoBaseConfiguration applicationProperties,
+          String identifier,
+          final String eTag,
+          Function<String, String> supplier) {
     if (applicationProperties.isReadOnly()) {
       String message = "Repository is in read-only mode. Delete request denied.";
       LOGGER.info(message);
@@ -265,7 +281,7 @@ public class DataResourceUtils {
       LOGGER.trace("Resource found. Checking for permission {} or role {}.", PERMISSION.ADMINISTRATE, RepoUserRole.ADMINISTRATOR);
       if (DataResourceUtils.hasPermission(resource, PERMISSION.ADMINISTRATE) || AuthenticationHelper.hasAuthority(RepoUserRole.ADMINISTRATOR.getValue())) {
         LOGGER.trace("Permissions found. Continuing with DELETE operation.");
-        ControllerUtils.checkEtag(request, resource);
+        ControllerUtils.checkEtag(eTag, resource);
         if (!DataResource.State.REVOKED.equals(resource.getState()) || AuthenticationHelper.hasAuthority(RepoUserRole.ADMINISTRATOR.getValue()) || AuthenticationHelper.isPrincipal("SELF")) {
           //call delete if resource not revoked (to revoke it) or if it is revoked and role is administrator or caller is repository itself (to set state to GONE)
           applicationProperties.getDataResourceService().delete(resource);

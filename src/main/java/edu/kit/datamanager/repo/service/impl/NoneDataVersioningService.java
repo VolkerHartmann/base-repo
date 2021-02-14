@@ -56,9 +56,6 @@ public class NoneDataVersioningService implements IRepoVersioningService{
 
   private static final Logger logger = LoggerFactory.getLogger(NoneDataVersioningService.class);
 
-  @Autowired
-  private IContentInformationDao dao;
-
   private RepoBaseConfiguration applicationProperties;
 
   @Override

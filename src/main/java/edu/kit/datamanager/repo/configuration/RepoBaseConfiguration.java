@@ -165,7 +165,7 @@ public class RepoBaseConfiguration {
    */
   public void setVersioningService(IRepoVersioningService versioningService) {
     this.versioningService = versioningService;
-    auditEnabled = new NoneDataVersioningService().getServiceName().equals(versioningService.getServiceName());
+    auditEnabled = !new NoneDataVersioningService().getServiceName().equals(versioningService.getServiceName());
  }
 
   /**

@@ -35,8 +35,7 @@ public class DateBasedStorageService implements IRepoStorageService {
 
   @Autowired
   private Logger logger;
-  @Autowired
-  private IContentInformationDao dao;
+
   @Autowired
   private DateBasedStorageProperties applicationProperties;
 

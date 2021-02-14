@@ -38,7 +38,6 @@ import edu.kit.datamanager.repo.domain.UnknownInformationConstants;
 import edu.kit.datamanager.repo.domain.acl.AclEntry;
 import edu.kit.datamanager.repo.service.IDataResourceService;
 import edu.kit.datamanager.repo.util.SpecUtils;
-import edu.kit.datamanager.service.IAuditService;
 import edu.kit.datamanager.service.IMessagingService;
 import edu.kit.datamanager.util.AuthenticationHelper;
 import edu.kit.datamanager.util.ControllerUtils;
@@ -54,8 +53,6 @@ import java.util.Optional;
 import java.util.UUID;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import org.javers.core.Javers;
-import org.javers.core.JaversBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,7 +62,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -85,8 +81,6 @@ public class DataResourceService implements IDataResourceService {
   @Autowired
   private IMessagingService messagingService;
 
-  private IAuditService<DataResource> auditService;
-
   @PersistenceContext
   private EntityManager em;
 
@@ -99,7 +93,7 @@ public class DataResourceService implements IDataResourceService {
   @Override
   public void configure(RepoBaseConfiguration applicationProperties) {
     this.applicationProperties = applicationProperties;
-    auditService = applicationProperties.getAuditService();
+    printInfo("configure");
   }
 
   @Override
@@ -112,6 +106,7 @@ public class DataResourceService implements IDataResourceService {
   @Transactional
   public DataResource create(DataResource resource, String callerPrincipal, String callerFirstName, String callerLastName) {
     logger.trace("Performing create({}, {}, {}, {}).", resource, callerPrincipal, callerFirstName, callerLastName);
+    printInfo("create");
 
     //reset id as external assignment of ids is not allowed
     resource.setId(null);
@@ -159,15 +154,17 @@ public class DataResourceService implements IDataResourceService {
         // Test a maximum of 10 times for a new UUID
         for (int tryToFindIdentifier = 0; !success && (tryToFindIdentifier < 10); tryToFindIdentifier++) {
           String altId = UUID.randomUUID().toString();
-          
+
           logger.debug("No primary identifier assigned to resource and no alternate identifier of type INTERNAL was found. Assigning alternate INTERNAL identifier {}.", altId);
-          resource.getAlternateIdentifiers().add(Identifier.factoryInternalIdentifier(altId));
+          Identifier internalIdentifier = Identifier.factoryInternalIdentifier(altId);
+          resource.getAlternateIdentifiers().add(internalIdentifier);
           resource.setId(altId);
           try {
             testForConflictingIdentifiers(resource);
             success = true;
           } catch (Throwable tw) {
-            // do nothing
+            // remove created internal identifier.
+            resource.getAlternateIdentifiers().remove(internalIdentifier);
           }
         }
       }
@@ -286,7 +283,7 @@ public class DataResourceService implements IDataResourceService {
     resource = getDao().save(resource);
 
     logger.trace("Capturing audit information.");
-    auditService.captureAuditInformation(resource, AuthenticationHelper.getPrincipal());
+    applicationProperties.getAuditService().captureAuditInformation(resource, AuthenticationHelper.getPrincipal());
 
     logger.trace("Sending CREATE event.");
     messagingService.send(DataResourceMessage.factoryCreateMessage(resource.getId(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
@@ -296,6 +293,7 @@ public class DataResourceService implements IDataResourceService {
   @Override
   public DataResource findById(final String id) {
     logger.trace("Performing findById({}).", id);
+    printInfo("findById");
     Optional<DataResource> result = getDao().findById(id);
 
     if (!result.isPresent()) {
@@ -309,6 +307,7 @@ public class DataResourceService implements IDataResourceService {
   @Override
   public DataResource findByAnyIdentifier(final String resourceIdentifier) {
     logger.trace("Performing findByAnyIdentifier({}).", resourceIdentifier);
+    printInfo("findByAnyIdentifier");
     return findByAnyIdentifier(resourceIdentifier, null);
   }
 
@@ -333,7 +332,7 @@ public class DataResourceService implements IDataResourceService {
     DataResource resource = result.get();
     if (Objects.nonNull(version)) {
       logger.trace("Obtained resource for identifier {}. Checking for shadow of version {}.", resourceIdentifier, version);
-      Optional<DataResource> optAuditResult = auditService.getResourceByVersion(resource.getId(), version);
+      Optional<DataResource> optAuditResult = applicationProperties.getAuditService().getResourceByVersion(resource.getId(), version);
       if (optAuditResult.isPresent()) {
         logger.trace("Shadow successfully obtained. Returning version {} of resource with id {}.", version, resourceIdentifier);
         return optAuditResult.get();
@@ -506,7 +505,7 @@ public class DataResourceService implements IDataResourceService {
     DataResource result = getDao().save(updated);
 
     logger.trace("Capturing audit information.");
-    auditService.captureAuditInformation(result, AuthenticationHelper.getPrincipal());
+    applicationProperties.getAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
 
     logger.trace("Sending UPDATE event.");
     messagingService.send(DataResourceMessage.factoryUpdateMessage(resource.getId(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
@@ -558,7 +557,7 @@ public class DataResourceService implements IDataResourceService {
     DataResource result = getDao().save(newResource);
 
     logger.trace("Capturing audit information.");
-    auditService.captureAuditInformation(result, AuthenticationHelper.getPrincipal());
+    applicationProperties.getAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
 
     logger.trace("Sending UPDATE event.");
     messagingService.send(DataResourceMessage.factoryUpdateMessage(resource.getId(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
@@ -568,7 +567,7 @@ public class DataResourceService implements IDataResourceService {
   @Override
   public Optional<String> getAuditInformationAsJson(String resourceIdentifier, Pageable pgbl) {
     logger.trace("Performing getAuditInformation({}, {}).", resourceIdentifier, pgbl);
-    return auditService.getAuditInformationAsJson(resourceIdentifier, pgbl.getPageNumber(), pgbl.getPageSize());
+    return applicationProperties.getAuditService().getAuditInformationAsJson(resourceIdentifier, pgbl.getPageNumber(), pgbl.getPageSize());
   }
 
   /**
@@ -621,6 +620,11 @@ public class DataResourceService implements IDataResourceService {
     if (newIdentifiers.isEmpty()) {
       return;
     }
+    List<String> temporaryValues = new ArrayList<>();
+    for (UnknownInformationConstants item : UnknownInformationConstants.values()) {
+      temporaryValues.add(item.getValue());
+    }
+    newIdentifiers.removeAll(temporaryValues);
     String[] afterList = newIdentifiers.toArray(new String[]{});
     logger.trace("Checking for conflicting identifiers.");
     long cnt = getDao().count(PrimaryIdentifierSpec.toSpecification(afterList).or(AlternateIdentifierSpec.toSpecification(afterList).or(InternalIdentifierSpec.toSpecification(afterList))));
@@ -654,7 +658,7 @@ public class DataResourceService implements IDataResourceService {
 
     //capture state change, not a delete operation as the resource is not physically deleted
     logger.trace("Capturing audit information.");
-    auditService.captureAuditInformation(result, AuthenticationHelper.getPrincipal());
+    applicationProperties.getAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
   }
 
   protected IDataResourceDao getDao() {
@@ -670,6 +674,23 @@ public class DataResourceService implements IDataResourceService {
   public void testForConflictingIdentifiers(DataResource newResource) {
     List<String> uniqueIdentifiers = getUniqueIdentifiers(newResource);
     checkUniqueIdentifiers(uniqueIdentifiers);
+  }
+
+  private void printInfo(String message) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("----------------------------------------------------------------------------------");
+      logger.trace(message + " -> " + this);
+      logger.trace("----------------------------------------------------------------------------------");
+      logger.trace("DataResourceService -> " + applicationProperties.getAuditService());
+      logger.trace("DataResourceService -> " + applicationProperties.getBasepath());
+      logger.trace("DataResourceService -> " + applicationProperties.getContentInformationAuditService());
+      logger.trace("DataResourceService -> " + applicationProperties.getContentInformationService());
+      logger.trace("DataResourceService -> " + applicationProperties.getDataResourceService());
+      logger.trace("DataResourceService -> " + applicationProperties.getEventPublisher());
+      logger.trace("DataResourceService -> " + applicationProperties.getStorageService());
+      logger.trace("DataResourceService -> " + applicationProperties.getVersioningService());
+      logger.trace("----------------------------------------------------------------------------------");
+    }
   }
 
 }
