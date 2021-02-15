@@ -154,7 +154,9 @@ public class DataResourceController implements IDataResourceController {
     repositoryProperties = rbc;
 
     if (!this.applicationProperties.isAuditEnabled() && !"none".equals(this.applicationProperties.getDefaultVersioningService())) {
-      throw new IllegalArgumentException("Conflicting configuration properties detected. 'repo.audit.enabled' must be 'true' if 'repo.file.versioning.default' is not 'none'.");
+      String message = "Conflicting configuration properties detected. 'repo.audit.enabled' must be 'true' if 'repo.file.versioning.default' is not 'none'.";
+      LOGGER.warn(message);
+      throw new IllegalArgumentException(message);
     }
   }
 

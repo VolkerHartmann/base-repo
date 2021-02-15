@@ -300,7 +300,7 @@ public class DataResourceService implements IDataResourceService {
       logger.error("No data resource found for identifier {}. Throwing ResourceNotFoundException.", id);
       throw new ResourceNotFoundException("Data resource with id " + id + " was not found.");
     }
-
+    logger.trace("mmmmm -> Dataresource id '{}', eTag '{}'", result.get().getId(), result.get().getEtag());
     return result.get();
   }
 
@@ -326,7 +326,9 @@ public class DataResourceService implements IDataResourceService {
         throw new CustomInternalServerError("Inconsistent state detected. The provided identifier is mapping to multiple resources.");
       }
       if (!result.isPresent()) {
-        throw new ResourceNotFoundException("Data resource with identifier " + resourceIdentifier + " was not found.");
+        String message = "Data resource with identifier " + resourceIdentifier + " was not found.";
+        logger.info(message);
+        throw new ResourceNotFoundException(message);
       }
     }
     DataResource resource = result.get();
@@ -343,6 +345,7 @@ public class DataResourceService implements IDataResourceService {
       }
     }
 
+    logger.trace("mmmmm -> Dataresource id '{}', eTag '{}'", resource.getId(), resource.getEtag());
     return resource;
   }
 
@@ -526,29 +529,32 @@ public class DataResourceService implements IDataResourceService {
     //check if any forbidden field has been updated
     //use PatchUtil as it does exactly this check
     if (!PatchUtil.canUpdate(resource, newResource, userGrants)) {
-      throw new UpdateForbiddenException("Update not applicable. At least one unmodifiable field has been changed.");
+      String message = "Update not applicable. At least one unmodifiable field has been changed.";
+      logger.info(message);
+      throw new UpdateForbiddenException(message);
     }
 
-    String errorMessage = null;
+    StringBuilder errorMessage = new StringBuilder();
     if (newResource.getAcls() == null || newResource.getAcls().isEmpty()) {
-      errorMessage = "Empty ACL provided for update.";
+      errorMessage.append("Empty ACL provided for update.\n");
     }
 
     if (newResource.getTitles() == null || newResource.getTitles().isEmpty()) {
-      errorMessage = "Empty title list provided for update.";
+      errorMessage.append("Empty title list provided for update.\n");
     }
     if (newResource.getCreators() == null || newResource.getCreators().isEmpty()) {
-      errorMessage = "Empty creators list provided for update.";
+      errorMessage.append("Empty creators list provided for update.\n");
     }
     if (newResource.getPublicationYear() == null) {
-      errorMessage = "Empty publication year provided for update.";
+      errorMessage.append("Empty publication year provided for update.\n");
     }
     if (newResource.getPublisher() == null) {
-      errorMessage = "Empty publisher provided for update.";
+      errorMessage.append("Empty publication year provided for update.\n");
     }
 
-    if (!Objects.isNull(errorMessage)) {
-      throw new BadArgumentException(errorMessage);
+    if (errorMessage.length() > 0) {
+      logger.info(errorMessage.toString());
+      throw new BadArgumentException(errorMessage.toString());
     }
 
     logger.trace("Setting resource's lastUpdate to now().");

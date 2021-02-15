@@ -83,7 +83,9 @@ public class ContentDataUtils {
     ControllerUtils.checkAnonymousAccess();
     //@TODO escape path properly
     if (path == null || path.length() == 0 || path.endsWith("/")) {
-      throw new BadArgumentException("Provided path is invalid. Path must not be empty and must not end with a slash.");
+      String message = "Provided path is invalid. Path must not be empty and must not end with a slash.";
+      LOGGER.info(message);
+      throw new BadArgumentException(message);
     }
     //check data resource and permissions
     DataResourceUtils.performPermissionCheck(resource, PERMISSION.WRITE);
@@ -259,7 +261,9 @@ public class ContentDataUtils {
   public static String getContentPathFromRequest(WebRequest request) {
     String requestedUri = (String) request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, WebRequest.SCOPE_REQUEST);
     if (requestedUri == null) {
-      throw new CustomInternalServerError("Unable to obtain request URI.");
+      String message = "Unable to obtain request URI.";
+      LOGGER.info(message);
+      throw new CustomInternalServerError(message);
     }
     return requestedUri.substring(requestedUri.indexOf("data/") + "data/".length());
   }

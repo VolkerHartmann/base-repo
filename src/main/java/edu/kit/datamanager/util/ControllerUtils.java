@@ -95,7 +95,9 @@ public class ControllerUtils {
    */
   public static void checkAnonymousAccess() throws UnauthorizedAccessException {
     if (AuthenticationHelper.isAnonymous()) {
-      throw new UnauthorizedAccessException("Please login in order to be able to perform this operation.");
+      String message = "Please login in order to be able to perform this operation.";
+      LOGGER.info(message);
+      throw new UnauthorizedAccessException(message);
     }
   }
 
@@ -143,7 +145,9 @@ public class ControllerUtils {
     LOGGER.trace("Received ETag: {}", etagValue);
 
     if (etagValue == null) {
-      throw new EtagMissingException("If-Match header with valid etag is missing.");
+      String message = "If-Match header with valid etag is missing.";
+      LOGGER.trace(message);
+      throw new EtagMissingException(message);
     }
     return etagValue;
   }
@@ -164,7 +168,9 @@ public class ControllerUtils {
     LOGGER.trace("Checking ETag for resource with ETag {}.", etag);
  
     if (!etagValue.equals("\"" + etag + "\"")) {
-      throw new EtagMismatchException("ETag not matching or not provided.");
+      String message = String.format("ETag not matching or not provided. (provided: '%s' <-> resource: '%s')", etagValue, etag);
+      LOGGER.trace(message);
+      throw new EtagMismatchException(message);
     }
   }
 
@@ -198,7 +204,9 @@ public class ControllerUtils {
     try {
       return Long.parseLong(id);
     } catch (NumberFormatException ex) {
-      throw new BadArgumentException("Provided id must be numeric.");
+     String message = "Provided id must be numeric.";
+      LOGGER.trace(message);
+      throw new BadArgumentException(message);
     }
   }
 

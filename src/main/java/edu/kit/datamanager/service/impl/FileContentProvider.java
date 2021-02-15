@@ -46,7 +46,9 @@ public class FileContentProvider implements IContentProvider{
   public void provide(ContentElement contentElement, MediaType mediaType, String filename, HttpServletResponse response){
 
     if(versioningServices == null){
-      throw new CustomInternalServerError("No versioning service found. Unable to provide any content.");
+      String message = "No versioning service found. Unable to provide any content.";
+      logger.info(message);
+      throw new CustomInternalServerError(message);
     }
 
     logger.trace("Providing content element {}.", contentElement);

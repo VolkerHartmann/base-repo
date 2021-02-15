@@ -58,7 +58,9 @@ public class PathUtils {
     try {
       String internalIdentifier = DataResourceUtils.getInternalIdentifier(parentResource);
       if (internalIdentifier == null) {
-        throw new CustomInternalServerError("Data integrity error. No internal identifier assigned to resource.");
+      String message = "Data integrity error. No internal identifier assigned to resource.";
+      LOGGER.info(message);
+      throw new CustomInternalServerError(message);
       }
       LOGGER.trace("Getting data URI for resource with id {} and relative path {}.", internalIdentifier, relativeDataPath);
       URIBuilder uriBuilder = new URIBuilder(properties.getBasepath().toURI());
@@ -68,7 +70,9 @@ public class PathUtils {
       LOGGER.trace("Returning data URI {}.", result);
       return result;
     } catch (URISyntaxException ex) {
-      throw new CustomInternalServerError("Failed to transform configured basepath to URI.");
+      String message = "Failed to transform configured basepath to URI.";
+      LOGGER.info(message);
+      throw new CustomInternalServerError(message);
     }
   }
 

@@ -189,6 +189,25 @@ public class DataResourceUtils {
           final DataResource newResource,
           final WebRequest request,
           Function<String, String> supplier) {
+    String eTag = ControllerUtils.getEtagFromHeader(request);
+    return updateResource(applicationProperties, identifier, newResource, eTag, supplier);
+  }
+
+  /**
+   * Updata an existing resource.
+   *
+   * @param applicationProperties
+   * @param identifier
+   * @param newResource
+   * @param request
+   * @param supplier
+   * @return
+   */
+  public static DataResource updateResource(RepoBaseConfiguration applicationProperties,
+          String identifier,
+          final DataResource newResource,
+          final String eTag,
+          Function<String, String> supplier) {
     if (applicationProperties.isReadOnly()) {
       String message = "Repository is in read-only mode. Put request denied.";
       LOGGER.info(message);
@@ -199,7 +218,7 @@ public class DataResourceUtils {
     DataResource resource = getResourceByIdentifierOrRedirect(applicationProperties, identifier, null, supplier);
     DataResourceUtils.performPermissionCheck(resource, PERMISSION.WRITE);
 
-    ControllerUtils.checkEtag(request, resource);
+    ControllerUtils.checkEtag(eTag, resource);
     newResource.setId(resource.getId());
 
     DataResource result = applicationProperties.getDataResourceService().put(resource, newResource, getUserAuthorities(resource));
@@ -214,21 +233,20 @@ public class DataResourceUtils {
    * @param patch
    * @param eTag
    * @param patchContentInformation
-   * @return 
+   * @return
    */
   public static void patchResource(RepoBaseConfiguration applicationProperties,
           String identifier,
           JsonPatch patch,
           String eTag,
           Function<String, String> patchContentInformation) {
-     if (applicationProperties.isReadOnly()) {
-     String message = "Repository is in read-only mode. Patch request denied.";
+    if (applicationProperties.isReadOnly()) {
+      String message = "Repository is in read-only mode. Patch request denied.";
       LOGGER.info(message);
       throw new ServiceUnavailableException(message);
     }
 
     ControllerUtils.checkAnonymousAccess();
-
 
     DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(applicationProperties, identifier, null, patchContentInformation);
 
@@ -238,7 +256,7 @@ public class DataResourceUtils {
 
     applicationProperties.getDataResourceService().patch(resource, patch, getUserAuthorities(resource));
     return;
-   }
+  }
 
   /**
    * Delete an existing resource.
@@ -287,7 +305,9 @@ public class DataResourceUtils {
           applicationProperties.getDataResourceService().delete(resource);
         }
       } else {
-        throw new UpdateForbiddenException("Insufficient permissions. ADMINISTRATE permission or ROLE_ADMINISTRATOR required.");
+        String message = "Insufficient permissions. ADMINISTRATE permission or ROLE_ADMINISTRATOR required.";
+        LOGGER.info(message);
+        throw new UpdateForbiddenException(message);
       }
     } catch (ResourceNotFoundException ex) {
       //ignored
@@ -304,25 +324,25 @@ public class DataResourceUtils {
     }
     return null;
   }
+
   /**
-   * 
+   *
    * @param applicationProperties
    * @param resourceIdentifier
    * @param pgbl
    * @param supplier
-   * @return 
+   * @return
    */
- public static Optional<String> getAuditInformation(RepoBaseConfiguration applicationProperties,
+  public static Optional<String> getAuditInformation(RepoBaseConfiguration applicationProperties,
           final String resourceIdentifier,
           final Pageable pgbl,
           Function<String, String> supplier) {
-   
-    
-     DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(applicationProperties, resourceIdentifier, null, supplier);
+
+    DataResource resource = DataResourceUtils.getResourceByIdentifierOrRedirect(applicationProperties, resourceIdentifier, null, supplier);
     DataResourceUtils.performPermissionCheck(resource, PERMISSION.READ);
 
     return applicationProperties.getDataResourceService().getAuditInformationAsJson(resourceIdentifier, pgbl);
-}
+  }
 
   public static DataResource filterResource(DataResource resource) {
     if (!AuthenticationHelper.isAuthenticatedAsService() && !DataResourceUtils.hasPermission(resource, PERMISSION.ADMINISTRATE) && !AuthenticationHelper.hasAuthority(RepoUserRole.ADMINISTRATOR.toString())) {
@@ -423,7 +443,9 @@ public class DataResourceUtils {
           LOGGER.trace("Resource state is {}. No special access check necessary.", resource.getState());
           break;
         case GONE:
-          throw new ResourceNotFoundException("The resource never was or is not longer available.");
+          String message = "The resource never was or is not longer available.";
+          LOGGER.info(message);
+          throw new ResourceNotFoundException(message);
         default:
           LOGGER.warn("Unhandled resource state {} detected. Not applying any special access checks.", resource.getState());
       }
