@@ -291,7 +291,6 @@ public class DataResourceService implements IDataResourceService {
       logger.error("No data resource found for identifier {}. Throwing ResourceNotFoundException.", id);
       throw new ResourceNotFoundException("Data resource with id " + id + " was not found.");
     }
-    logger.trace("mmmmm -> Dataresource id '{}', eTag '{}'", result.get().getId(), result.get().getEtag());
     return result.get();
   }
 
@@ -336,7 +335,6 @@ public class DataResourceService implements IDataResourceService {
       }
     }
 
-    logger.trace("mmmmm -> Dataresource id '{}', eTag '{}'", resource.getId(), resource.getEtag());
     return resource;
   }
 
@@ -670,15 +668,6 @@ public class DataResourceService implements IDataResourceService {
     if (logger.isTraceEnabled()) {
       logger.trace("----------------------------------------------------------------------------------");
       logger.trace(message + " -> " + this);
-      logger.trace("----------------------------------------------------------------------------------");
-      logger.trace("DataResourceService -> " + applicationProperties.getAuditService());
-      logger.trace("DataResourceService -> " + applicationProperties.getBasepath());
-      logger.trace("DataResourceService -> " + applicationProperties.getContentInformationAuditService());
-      logger.trace("DataResourceService -> " + applicationProperties.getContentInformationService());
-      logger.trace("DataResourceService -> " + applicationProperties.getDataResourceService());
-      logger.trace("DataResourceService -> " + applicationProperties.getEventPublisher());
-      logger.trace("DataResourceService -> " + applicationProperties.getStorageService());
-      logger.trace("DataResourceService -> " + applicationProperties.getVersioningService());
       logger.trace("----------------------------------------------------------------------------------");
     }
   }
