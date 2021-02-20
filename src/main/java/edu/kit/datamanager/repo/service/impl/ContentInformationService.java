@@ -96,8 +96,6 @@ public class ContentInformationService implements IContentInformationService {
   private RepoBaseConfiguration applicationProperties;
   @Autowired
   private IMessagingService messagingService;
-
-  private IAuditService<ContentInformation> auditService;
   @Autowired
   private IRepoVersioningService[] versioningServices;
 
@@ -113,7 +111,6 @@ public class ContentInformationService implements IContentInformationService {
   @Override
   public void configure(RepoBaseConfiguration applicationProperties) {
     this.applicationProperties = applicationProperties;
-    auditService = applicationProperties.getContentInformationAuditService();
   }
 
   @Override
@@ -241,7 +238,7 @@ public class ContentInformationService implements IContentInformationService {
       contentInfo.setUploader(principal);
     }
 
-    long newMetadataVersion = (contentInfo.getId() != null) ? auditService.getCurrentVersion(Long.toString(contentInfo.getId())) + 1 : 1;
+    long newMetadataVersion = (contentInfo.getId() != null) ? applicationProperties.getContentInformationAuditService().getCurrentVersion(Long.toString(contentInfo.getId())) + 1 : 1;
     LOGGER.trace("Setting new version number of content information to {}.", newMetadataVersion);
     contentInfo.setVersion((int) newMetadataVersion);
 
@@ -254,7 +251,7 @@ public class ContentInformationService implements IContentInformationService {
     ContentInformation result = getDao().save(contentInfo);
 
     LOGGER.trace("Capturing audit information.");
-    auditService.captureAuditInformation(result, AuthenticationHelper.getPrincipal());
+    applicationProperties.getContentInformationAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
 
     LOGGER.trace("Sending CREATE event.");
     messagingService.send(DataResourceMessage.factoryCreateDataMessage(resource.getId(), result.getRelativePath(), result.getContentUri(), result.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
@@ -372,7 +369,7 @@ public class ContentInformationService implements IContentInformationService {
     ContentInformation result = contentInformation.get();
     if (Objects.nonNull(version)) {
       LOGGER.trace("Obtained content information for identifier {}. Checking for shadow of version {}.", result.getId(), version);
-      Optional<ContentInformation> optAuditResult = auditService.getResourceByVersion(Long.toString(result.getId()), version);
+      Optional<ContentInformation> optAuditResult = applicationProperties.getContentInformationAuditService().getResourceByVersion(Long.toString(result.getId()), version);
       if (optAuditResult.isPresent()) {
         LOGGER.trace("Shadow successfully obtained. Returning version {} of content information with id {}.", version, result.getId());
         result = optAuditResult.get();
@@ -388,7 +385,7 @@ public class ContentInformationService implements IContentInformationService {
   @Override
   public Optional<String> getAuditInformationAsJson(String resourceIdentifier, Pageable pgbl) {
     LOGGER.trace("Performing getAuditInformation({}, {}).", resourceIdentifier, pgbl);
-    return auditService.getAuditInformationAsJson(resourceIdentifier, pgbl.getPageNumber(), pgbl.getPageSize());
+    return applicationProperties.getContentInformationAuditService().getAuditInformationAsJson(resourceIdentifier, pgbl.getPageNumber(), pgbl.getPageSize());
   }
 
   @Override
@@ -498,7 +495,7 @@ public class ContentInformationService implements IContentInformationService {
     ContentInformation updated = PatchUtil.applyPatch(resource, patch, ContentInformation.class, userGrants);
     LOGGER.trace("Patch successfully applied.");
 
-    long newVersion = auditService.getCurrentVersion(Long.toString(updated.getId())) + 1;
+    long newVersion = applicationProperties.getContentInformationAuditService().getCurrentVersion(Long.toString(updated.getId())) + 1;
     LOGGER.trace("Setting new version number of content information to {}.", newVersion);
     updated.setVersion((int) newVersion);
 
@@ -506,7 +503,7 @@ public class ContentInformationService implements IContentInformationService {
     LOGGER.trace("Resource successfully persisted.");
 
     LOGGER.trace("Capturing audit information.");
-    auditService.captureAuditInformation(result, AuthenticationHelper.getPrincipal());
+    applicationProperties.getContentInformationAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
 
     LOGGER.trace("Sending UPDATE event.");
     messagingService.send(DataResourceMessage.factoryUpdateDataMessage(resource.getParentResource().getId(), updated.getRelativePath(), updated.getContentUri(), updated.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
@@ -519,7 +516,7 @@ public class ContentInformationService implements IContentInformationService {
     getDao().delete(resource);
 
     LOGGER.trace("Deleting audit information.");
-    auditService.deleteAuditInformation(Long.toString(resource.getId()), resource);
+    applicationProperties.getContentInformationAuditService().deleteAuditInformation(Long.toString(resource.getId()), resource);
 
     LOGGER.trace("Sending DELETE event.");
     messagingService.send(DataResourceMessage.factoryDeleteDataMessage(resource.getParentResource().getId(), resource.getRelativePath(), resource.getContentUri(), resource.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));

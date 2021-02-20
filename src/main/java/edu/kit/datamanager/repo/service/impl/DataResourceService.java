@@ -21,6 +21,7 @@ import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.entities.messaging.DataResourceMessage;
 import edu.kit.datamanager.exceptions.BadArgumentException;
 import edu.kit.datamanager.exceptions.CustomInternalServerError;
+import edu.kit.datamanager.exceptions.GoneException;
 import edu.kit.datamanager.exceptions.ResourceAlreadyExistException;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
 import edu.kit.datamanager.exceptions.UpdateForbiddenException;
@@ -45,6 +46,7 @@ import edu.kit.datamanager.util.PatchUtil;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.List;
@@ -172,18 +174,7 @@ public class DataResourceService implements IDataResourceService {
       logger.debug("Primary or other identifier found. Setting resource identifier to primary identifier {}.", resource.getIdentifier().getValue());
       resource.setId(resource.getIdentifier().getValue());
     }
-    logger.trace("Checking for existing resource with identifier {}.", resource.getId());
-    //check resource by identifier
-    long cnt = getDao().count(
-            AlternateIdentifierSpec.toSpecification(resource.getId()).
-                    or(PrimaryIdentifierSpec.toSpecification(resource.getId())).
-                    or(InternalIdentifierSpec.toSpecification(resource.getId()))
-    );
-    logger.trace("Found {} existing resources conflicting with provided identifier {}.", cnt, resource.getId());
-    if (cnt != 0) {
-      logger.error("Number of conflicting identifiers with identifier {} is neq 0. Throwing ResourceAlreadyExistException.", resource.getId());
-      throw new ResourceAlreadyExistException("There is already a resource with identifier " + resource.getId());
-    }
+    checkForConflicts(resource.getId());
     logger.trace("Checking for mandatory element 'titles'.");
     if (resource.getTitles().isEmpty()) {
       logger.error("No titles found. Throwing BadArgumentException.");
@@ -632,14 +623,7 @@ public class DataResourceService implements IDataResourceService {
     }
     newIdentifiers.removeAll(temporaryValues);
     String[] afterList = newIdentifiers.toArray(new String[]{});
-    logger.trace("Checking for conflicting identifiers.");
-    long cnt = getDao().count(PrimaryIdentifierSpec.toSpecification(afterList).or(AlternateIdentifierSpec.toSpecification(afterList).or(InternalIdentifierSpec.toSpecification(afterList))));
-    logger.trace("Found {} resources conflicting with at least one identifier of: {}.", cnt, afterList);
-    if (cnt > 0) {
-      logger.error("Number of conflicting identifiers with identifiers {} is neq 0. Throwing ResourceAlreadyExistException.", newIdentifiers);
-      throw new ResourceAlreadyExistException("There is at least one resource with one of the following identifiers: " + newIdentifiers);
-    }
-    logger.trace("No identifier conflict detected. Persisting resource.");
+    checkForConflicts(afterList);
   }
 
   @Override
@@ -699,4 +683,28 @@ public class DataResourceService implements IDataResourceService {
     }
   }
 
+  private void checkForConflicts(String... identifiers) {
+    String allIdentifiers = Arrays.toString(identifiers);
+    logger.trace("Checking for existing resource with identifier {}.", allIdentifiers);
+    //check resource by identifier
+    Specification<DataResource> spec = AlternateIdentifierSpec.toSpecification(identifiers).
+            or(PrimaryIdentifierSpec.toSpecification(identifiers)).
+            or(InternalIdentifierSpec.toSpecification(identifiers));
+    long cnt = getDao().count(spec);
+    logger.trace("Found {} existing resources conflicting with provided identifier {}.", cnt, allIdentifiers);
+    if (cnt != 0) {
+      logger.trace("Check if gone...");
+      List<DataResource.State> states = new ArrayList<>();
+      states.add(DataResource.State.GONE);
+      spec = StateSpecification.toSpecification(states).and(spec);
+      if (getDao().count(spec) != 0) {
+        String message = String.format("Resource '%s' already gone!", allIdentifiers);
+        logger.error(message);
+        throw new GoneException(message);
+      } else {
+        logger.error("Number of conflicting identifiers with identifier {} is neq 0. Throwing ResourceAlreadyExistException.", allIdentifiers);
+        throw new ResourceAlreadyExistException("There is already a resource with identifier " + allIdentifiers);
+      }
+    }
+  }
 }

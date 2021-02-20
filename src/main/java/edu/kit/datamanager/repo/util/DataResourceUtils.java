@@ -15,6 +15,8 @@
  */
 package edu.kit.datamanager.repo.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
 import com.google.common.base.Objects;
 import edu.kit.datamanager.controller.hateoas.event.PaginatedResultsRetrievedEvent;
@@ -64,6 +66,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class DataResourceUtils {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DataResourceUtils.class);
+  /**
+   * Mapper for parsing json.
+   */
+  private static ObjectMapper mapper = new ObjectMapper();
 
   private DataResourceUtils() {
   }
@@ -599,6 +605,19 @@ public class DataResourceUtils {
     //resource was found by resource identifier...return and proceed
     LOGGER.trace("Resource for identifier {} found. Returning resource #{}.", decodedIdentifier, resource.getId());
     return resource;
+  }
+  
+  public static DataResource copyDataResource(DataResource dataresource) {
+    DataResource returnValue;
+    try {
+      String jsonString = mapper.writeValueAsString(dataresource);
+      LOGGER.trace("dataresource: {}", jsonString);
+      returnValue = mapper.readValue(jsonString, DataResource.class);
+    } catch (JsonProcessingException ex) {
+      LOGGER.error("Error mapping dataresource!");
+      returnValue = dataresource;
+    }
+    return returnValue;
   }
 
 }
