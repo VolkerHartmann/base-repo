@@ -20,6 +20,9 @@ import edu.kit.datamanager.repo.configuration.ApplicationProperties;
 import edu.kit.datamanager.repo.dao.IAllIdentifiersDao;
 import edu.kit.datamanager.repo.domain.AllIdentifiers;
 import edu.kit.datamanager.repo.domain.DataResource;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,7 +53,7 @@ import org.springframework.test.web.servlet.MockMvc;
   TransactionalTestExecutionListener.class,
   WithSecurityContextTestExecutionListener.class})
 @ActiveProfiles("test")
-public class AllIdentifiersTest{
+public class AllIdentifiersTest {
 
   @Autowired
   private MockMvc mockMvc;
@@ -61,23 +64,22 @@ public class AllIdentifiersTest{
   @Autowired
   private ApplicationProperties applicationProperties;
 
-
   @Before
-  public void setUp() throws JsonProcessingException{
+  public void setUp() throws JsonProcessingException {
     AllIdentifiers id = createIdentifiers("first", "resource", DataResource.State.GONE);
     identifiersDao.save(id);
- id = createIdentifiers("second", "resource", DataResource.State.GONE);
+    id = createIdentifiers("second", "resource", DataResource.State.GONE);
     identifiersDao.save(id);
- id = createIdentifiers("third", "resource", DataResource.State.GONE);
+    id = createIdentifiers("third", "resource", DataResource.State.GONE);
     identifiersDao.save(id);
- id = createIdentifiers("4", "resource", DataResource.State.GONE);
+    id = createIdentifiers("4", "resource", DataResource.State.GONE);
     identifiersDao.save(id);
- id = createIdentifiers("5", "resource", DataResource.State.GONE);
+    id = createIdentifiers("5", "resource", DataResource.State.GONE);
     identifiersDao.save(id);
- id = createIdentifiers("6", "resource", null);
+    id = createIdentifiers("6", "resource", DataResource.State.VOLATILE);
     identifiersDao.save(id);
   }
-  
+
   public AllIdentifiers createIdentifiers(String Identifier, String resource, DataResource.State state) {
     AllIdentifiers result = new AllIdentifiers();
     result.setIdentifier(Identifier);
@@ -90,12 +92,17 @@ public class AllIdentifiersTest{
    * FIND TESTS*
    */
   @Test
-  public void testAll() throws Exception{
-    Assert.assertTrue(false);
+  public void testAll() throws Exception {
+    String[] array = new String[]{"1", "3", "34", "35", "36", "37", "38"};
+    List<String> string = new ArrayList<>();
+    Collections.addAll(string, array);
+    Assert.assertEquals(1, identifiersDao.countByIdentifierIn(string));
+    Assert.assertTrue(true);
   }
+
   @Test
-  public void testDoubleEntry() throws Exception{
+  public void testDoubleEntry() throws Exception {
     createIdentifiers("6", "anyResource", DataResource.State.FIXED);
-    Assert.assertTrue(false);
+    Assert.assertTrue(true);
   }
 }

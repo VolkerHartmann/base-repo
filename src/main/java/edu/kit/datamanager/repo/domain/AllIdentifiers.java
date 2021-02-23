@@ -18,6 +18,7 @@ package edu.kit.datamanager.repo.domain;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -32,6 +33,6 @@ public class AllIdentifiers{
   private String identifier;
  @NotBlank(message = "Internal identifier pointing to this record.")
   private String resourceId;
- @NotBlank(message = "State of this record.")
+ @NotNull(message = "State of this record.")
   private DataResource.State status;
 }
