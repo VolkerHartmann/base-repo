@@ -645,13 +645,13 @@ public class DataResourceControllerTestReadOnly{
    */
   @Test
   public void testDeleteResourceAnonymous() throws Exception{
-    this.mockMvc.perform(delete("/api/v1/dataresources/" + sampleResource.getId()).contentType("application/json")).andExpect(status().isServiceUnavailable());
+    this.mockMvc.perform(delete("/api/v1/dataresources/" + sampleResource.getId()).contentType("application/json")).andExpect(status().isPreconditionRequired());
   }
 
   @Test
   public void testDeleteInvalidResource() throws Exception{
     this.mockMvc.perform(delete("/api/v1/dataresources/0").header(HttpHeaders.AUTHORIZATION,
-            "Bearer " + userToken).contentType("application/json")).andExpect(status().isServiceUnavailable());
+            "Bearer " + userToken).contentType("application/json")).andExpect(status().isPreconditionRequired());
   }
 
   @Test
@@ -912,7 +912,7 @@ public class DataResourceControllerTestReadOnly{
 
     resource.setPublisher("OtherPub");
     this.mockMvc.perform(put("/api/v1/dataresources/" + sampleResource.getId()).header(HttpHeaders.AUTHORIZATION,
-            "Bearer " + adminToken).contentType("application/json").content(mapper.writeValueAsString(resource))).andDo(print()).andExpect(status().isServiceUnavailable());
+            "Bearer " + adminToken).contentType("application/json").content(mapper.writeValueAsString(resource))).andDo(print()).andExpect(status().isPreconditionRequired());
   }
 
   /**
