@@ -18,11 +18,7 @@ package edu.kit.datamanager.repo.dao;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.DataResource.State;
 import java.util.List;
-import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.repo.domain.AllIdentifiers;
-import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -30,7 +26,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
  *
  * @author jejkal
  */
-public interface IAllIdentifiersDao extends JpaRepository<AllIdentifiers, String>, JpaSpecificationExecutor<DataResource>{
+public interface IAllIdentifiersDao extends JpaRepository<AllIdentifiers, String> , JpaSpecificationExecutor<AllIdentifiers>{
 
   /**
    * Find all data resources NOT having the provided state, having at least one
@@ -44,7 +40,8 @@ public interface IAllIdentifiersDao extends JpaRepository<AllIdentifiers, String
    *
    * @return A list of data resources or an empty list.
    */
-  public List<DataResource> countByIdentifierIn(List<String> identifiers,State state);
-  public List<DataResource> countByIdentifierInAndState(List<String> identifiers,State state);
+  public List<DataResource> countByIdentifierIn(List<String> identifier);
+
+  public List<DataResource> countByIdentifierInAndStatus(List<String> identifier, State status);
 
 }
