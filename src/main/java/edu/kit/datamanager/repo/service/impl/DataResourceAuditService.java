@@ -35,25 +35,25 @@ import org.slf4j.LoggerFactory;
  *
  * @author jejkal
  */
-public class DataResourceAuditService implements IAuditService<DataResource>{
+public class DataResourceAuditService implements IAuditService<DataResource> {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(DataResourceAuditService.class);
-  
+
   private final Javers javers;
   private final RepoBaseConfiguration applicationProperties;
 
-  public DataResourceAuditService(Javers javers, RepoBaseConfiguration applicationProperties){
+  public DataResourceAuditService(Javers javers, RepoBaseConfiguration applicationProperties) {
     this.javers = javers;
     this.applicationProperties = applicationProperties;
     applicationProperties.setAuditService(this);
   }
 
   @Override
-  public void captureAuditInformation(DataResource resource, String principal){
+  public void captureAuditInformation(DataResource resource, String principal) {
     LOGGER.trace("Calling captureAuditInformation(DataResource#{}, {}).", resource.getId(), principal);
-    if(!applicationProperties.isAuditEnabled()){
+    if (!applicationProperties.isAuditEnabled()) {
       LOGGER.trace("Audit is disabled. Skipping registration of resource.");
-    } else{
+    } else {
       LOGGER.trace("Capturing audit information for resource {} modified by principal {}.", resource, principal);
       javers.commit(principal, resource);
       LOGGER.trace("Successfully committed audit information for resource with id {}.", resource.getId());
@@ -61,12 +61,12 @@ public class DataResourceAuditService implements IAuditService<DataResource>{
   }
 
   @Override
-  public Optional<String> getAuditInformationAsJson(String resourceId, int page, int resultsPerPage){
+  public Optional<String> getAuditInformationAsJson(String resourceId, int page, int resultsPerPage) {
     LOGGER.trace("Calling getAuditInformationAsJson({}, {}, {}).", resourceId, page, resultsPerPage);
-    if(!applicationProperties.isAuditEnabled()){
+    if (!applicationProperties.isAuditEnabled()) {
       LOGGER.trace("Audit is disabled. Returning empty result.");
       return Optional.empty();
-    } else{
+    } else {
       JqlQuery query = QueryBuilder.byInstanceId(resourceId, DataResource.class).limit(resultsPerPage).skip(page * resultsPerPage).build();
       Changes result = javers.findChanges(query);
 
@@ -76,40 +76,42 @@ public class DataResourceAuditService implements IAuditService<DataResource>{
   }
 
   @Override
-  public Optional<DataResource> getResourceByVersion(String resourceId, long version){
+  public Optional<DataResource> getResourceByVersion(String resourceId, long version) {
     LOGGER.trace("Calling getResourceByVersion({}, {}).", resourceId, version);
-    if(!applicationProperties.isAuditEnabled()){
-      LOGGER.trace("Audit is disabled. Returning empty result.");
-      return Optional.empty();
-    } else{
-      JqlQuery query = QueryBuilder.byInstanceId(resourceId, DataResource.class).withVersion(version).withShadowScope(ShadowScope.DEEP_PLUS).build();
-      LOGGER.trace("Obtaining shadows from Javers repository.");
-      List<Shadow<DataResource>> shadows = javers.findShadows(query);
+    Optional<DataResource> result = Optional.empty();
+    if ((resourceId != null) && (version > 0)) {
+      if (applicationProperties.isAuditEnabled()) {
+        JqlQuery query = QueryBuilder.byInstanceId(resourceId, DataResource.class).withVersion(version).withShadowScope(ShadowScope.DEEP_PLUS).build();
+        LOGGER.trace("Obtaining shadows from Javers repository.");
+        List<Shadow<DataResource>> shadows = javers.findShadows(query);
 
-      if(CollectionUtils.isEmpty(shadows)){
-        LOGGER.warn("No version information found for resource id {}. Returning empty result.", resourceId);
-        return Optional.empty();
+        if (!CollectionUtils.isEmpty(shadows)) {
+          LOGGER.trace("Shadow for resource id {} and version {} found. Returning result.", resourceId, version);
+          Shadow<DataResource> versionShadow = shadows.get(0);
+          LOGGER.trace("Returning shadow at index 0 with commit metadata {}.", versionShadow.getCommitMetadata());
+          result = Optional.of(versionShadow.get());
+        } else {
+          LOGGER.warn("No version information found for resource id {}. Returning empty result.", resourceId);
+        }
+      } else {
+        LOGGER.trace("Audit is disabled. Returning empty result.");
       }
-
-      LOGGER.trace("Shadow for resource id {} and version {} found. Returning result.", resourceId, version);
-      Shadow<DataResource> versionShadow = shadows.get(0);
-      LOGGER.trace("Returning shadow at index 0 with commit metadata {}.", versionShadow.getCommitMetadata());
-      return Optional.of(versionShadow.get());
     }
+    return result;
   }
 
   @Override
-  public long getCurrentVersion(String resourceId){
+  public long getCurrentVersion(String resourceId) {
     LOGGER.trace("Calling getCurrentVersion({}).", resourceId);
-    if(!applicationProperties.isAuditEnabled()){
+    if (!applicationProperties.isAuditEnabled()) {
       LOGGER.trace("Audit is disabled. Returning 0.");
       return 0l;
-    } else{
+    } else {
       JqlQuery query = QueryBuilder.byInstanceId(resourceId, DataResource.class).limit(1).build();
       LOGGER.trace("Obtaining snapshots from Javers repository.");
       List<CdoSnapshot> snapshots = javers.findSnapshots(query);
 
-      if(CollectionUtils.isEmpty(snapshots)){
+      if (CollectionUtils.isEmpty(snapshots)) {
         LOGGER.warn("No version information found for resource id {}. Returning 0.", resourceId);
         return 0;
       }
@@ -121,11 +123,11 @@ public class DataResourceAuditService implements IAuditService<DataResource>{
   }
 
   @Override
-  public void deleteAuditInformation(String resourceId, DataResource resource){
+  public void deleteAuditInformation(String resourceId, DataResource resource) {
     LOGGER.trace("Calling deleteAuditInformation({}, <resource>).", resourceId);
-    if(!applicationProperties.isAuditEnabled()){
+    if (!applicationProperties.isAuditEnabled()) {
       LOGGER.trace("Audit is disabled. Returning without doing anything.");
-    } else{
+    } else {
       LOGGER.trace("Performing shallow delete of resource with id {}.", resourceId);
       javers.commitShallowDelete(resourceId, resource);
       LOGGER.trace("Shallow delete executed.");

@@ -606,7 +606,12 @@ public class DataResourceUtils {
     LOGGER.trace("Resource for identifier {} found. Returning resource #{}.", decodedIdentifier, resource.getId());
     return resource;
   }
-  
+  /** 
+   * Make a copy of the resource to avoid updating database.
+   * 
+   * @param dataresource resource linked with the database.
+   * @return unlinked data resource.
+   */
   public static DataResource copyDataResource(DataResource dataresource) {
     DataResource returnValue;
     try {
