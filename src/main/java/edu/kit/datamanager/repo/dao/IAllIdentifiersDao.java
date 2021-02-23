@@ -19,6 +19,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.DataResource.State;
 import java.util.List;
 import edu.kit.datamanager.repo.domain.AllIdentifiers;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -26,22 +27,18 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
  *
  * @author jejkal
  */
-public interface IAllIdentifiersDao extends JpaRepository<AllIdentifiers, String> , JpaSpecificationExecutor<AllIdentifiers>{
+public interface IAllIdentifiersDao extends JpaRepository<AllIdentifiers, String>, JpaSpecificationExecutor<AllIdentifiers> {
 
-  /**
-   * Find all data resources NOT having the provided state, having at least one
-   * of the provided sids in their ACL list with the provided permission.
-   *
-   * @param state The state the resource should NOT have.
-   * @param sids A list of sids from which at least one sid must be in a
-   * matching resource's ACL.
-   * @param permission The permission a matching sid must be allowed to access
-   * the resource with.
-   *
-   * @return A list of data resources or an empty list.
-   */
-  public List<DataResource> countByIdentifierIn(List<String> identifier);
+  public long countByIdentifierIn(List<String> identifier);
 
-  public List<DataResource> countByIdentifierInAndStatus(List<String> identifier, State status);
+  public long countByIdentifierInAndStatus(List<String> identifier, State status);
+
+  public List<AllIdentifiers> findByIdentifierInAndStatus(List<String> identifier, State status);
+
+  public List<AllIdentifiers> findByIdentifierIn(List<String> identifier);
+
+  public Optional<AllIdentifiers> findByIdentifierAndStatus(String identifier, State status);
+
+  public Optional<AllIdentifiers> findByIdentifier(String identifier);
 
 }

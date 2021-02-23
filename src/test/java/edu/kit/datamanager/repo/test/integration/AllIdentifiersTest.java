@@ -23,6 +23,7 @@ import edu.kit.datamanager.repo.domain.DataResource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,24 +64,26 @@ public class AllIdentifiersTest {
 
   @Autowired
   private ApplicationProperties applicationProperties;
+  
+  private AllIdentifiers one, two, three, four, five, six;
 
   @Before
   public void setUp() throws JsonProcessingException {
-    AllIdentifiers id = createIdentifiers("first", "resource", DataResource.State.GONE);
-    identifiersDao.save(id);
-    id = createIdentifiers("second", "resource", DataResource.State.GONE);
-    identifiersDao.save(id);
-    id = createIdentifiers("third", "resource", DataResource.State.GONE);
-    identifiersDao.save(id);
-    id = createIdentifiers("4", "resource", DataResource.State.GONE);
-    identifiersDao.save(id);
-    id = createIdentifiers("5", "resource", DataResource.State.GONE);
-    identifiersDao.save(id);
-    id = createIdentifiers("6", "resource", DataResource.State.VOLATILE);
-    identifiersDao.save(id);
+    AllIdentifiers id = createIdentifier("first", "resource", DataResource.State.GONE);
+    one = identifiersDao.save(id);
+    id = createIdentifier("second", "resource", DataResource.State.GONE);
+    two = identifiersDao.save(id);
+    id = createIdentifier("third", "resource", DataResource.State.GONE);
+    three = identifiersDao.save(id);
+    id = createIdentifier("4", "resource", DataResource.State.REVOKED);
+    four = identifiersDao.save(id);
+    id = createIdentifier("5", "resource2", DataResource.State.GONE);
+    five = identifiersDao.save(id);
+    id = createIdentifier("6", "resource", DataResource.State.VOLATILE);
+    six = identifiersDao.save(id);
   }
 
-  public AllIdentifiers createIdentifiers(String Identifier, String resource, DataResource.State state) {
+  public AllIdentifiers createIdentifier(String Identifier, String resource, DataResource.State state) {
     AllIdentifiers result = new AllIdentifiers();
     result.setIdentifier(Identifier);
     result.setResourceId(resource);
@@ -94,15 +97,60 @@ public class AllIdentifiersTest {
   @Test
   public void testAll() throws Exception {
     String[] array = new String[]{"1", "3", "34", "35", "36", "37", "38"};
-    List<String> string = new ArrayList<>();
-    Collections.addAll(string, array);
-    Assert.assertEquals(1, identifiersDao.countByIdentifierIn(string));
-    Assert.assertTrue(true);
+    List<String> allPossibleIdentifiers = new ArrayList<>();
+    Collections.addAll(allPossibleIdentifiers, array);
+    Assert.assertEquals(0, identifiersDao.countByIdentifierIn(allPossibleIdentifiers));
+    allPossibleIdentifiers.add("4");
+    Assert.assertEquals(1, identifiersDao.countByIdentifierIn(allPossibleIdentifiers));
+    Assert.assertEquals(0, identifiersDao.countByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.FIXED));
+    Assert.assertEquals(1, identifiersDao.countByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.REVOKED));
+    Assert.assertEquals(1, identifiersDao.findByIdentifierIn(allPossibleIdentifiers).size());
+    Assert.assertTrue(identifiersDao.findByIdentifierIn(allPossibleIdentifiers).contains(four));
+     Assert.assertFalse(identifiersDao.findByIdentifierIn(allPossibleIdentifiers).contains(one));
+    Assert.assertTrue(identifiersDao.findByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.VOLATILE).isEmpty());
+    Assert.assertTrue(identifiersDao.findByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.GONE).isEmpty());
+    Assert.assertFalse(identifiersDao.findByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.REVOKED).isEmpty());
+    allPossibleIdentifiers.add("first");
+    Assert.assertEquals(2, identifiersDao.countByIdentifierIn(allPossibleIdentifiers));
+    Assert.assertEquals(0, identifiersDao.countByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.FIXED));
+    Assert.assertEquals(1, identifiersDao.countByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.GONE));
+    Assert.assertEquals(1, identifiersDao.countByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.REVOKED));
+    Assert.assertTrue(identifiersDao.findByIdentifierIn(allPossibleIdentifiers).contains(four));
+     Assert.assertTrue(identifiersDao.findByIdentifierIn(allPossibleIdentifiers).contains(one));
+  Assert.assertTrue(identifiersDao.findByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.VOLATILE).isEmpty());
+    Assert.assertFalse(identifiersDao.findByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.REVOKED).isEmpty());
+    Assert.assertEquals(1, identifiersDao.findByIdentifierInAndStatus(allPossibleIdentifiers, DataResource.State.GONE).size());
+   Assert.assertTrue(true);
   }
 
   @Test
   public void testDoubleEntry() throws Exception {
-    createIdentifiers("6", "anyResource", DataResource.State.FIXED);
-    Assert.assertTrue(true);
+    AllIdentifiers identifier = createIdentifier("6", "anyResource", DataResource.State.FIXED);
+    identifiersDao.save(identifier);
+    String[] array = new String[]{"6"};
+    List<String> allPossibleIdentifiers = new ArrayList<>();
+    Collections.addAll(allPossibleIdentifiers, array);
+     
+    List<AllIdentifiers> findByIdentifierIn = identifiersDao.findByIdentifierIn(allPossibleIdentifiers);
+    Assert.assertEquals(1, findByIdentifierIn.size());
+    Assert.assertEquals(identifier, findByIdentifierIn.get(0));
+  }
+  @Test
+  public void testFindByIdentifier() throws Exception {
+    Optional<AllIdentifiers> result = identifiersDao.findById("first");
+    Assert.assertTrue(result.isPresent());
+    Assert.assertEquals("first", result.get().getIdentifier());
+    Assert.assertEquals("resource", result.get().getResourceId());
+    Assert.assertEquals(DataResource.State.GONE, result.get().getStatus());
+    result = identifiersDao.findByIdentifierAndStatus("second", DataResource.State.GONE);
+    Assert.assertTrue(result.isPresent());
+    Assert.assertEquals(two.getIdentifier(), result.get().getIdentifier());
+    Assert.assertEquals(two.getResourceId(), result.get().getResourceId());
+    Assert.assertEquals(two.getStatus(), result.get().getStatus());
+    result = identifiersDao.findByIdentifierAndStatus("5", DataResource.State.FIXED);
+    Assert.assertFalse(result.isPresent());
+    result = identifiersDao.findByIdentifier("5");
+    Assert.assertTrue(result.isPresent());
+    Assert.assertEquals(five, result.get());
   }
 }

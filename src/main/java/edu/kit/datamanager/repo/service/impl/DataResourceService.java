@@ -26,6 +26,7 @@ import edu.kit.datamanager.exceptions.ResourceAlreadyExistException;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
 import edu.kit.datamanager.exceptions.UpdateForbiddenException;
 import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
+import edu.kit.datamanager.repo.dao.IAllIdentifiersDao;
 import edu.kit.datamanager.repo.dao.spec.dataresource.AlternateIdentifierSpec;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.dao.spec.dataresource.InternalIdentifierSpec;
@@ -33,6 +34,7 @@ import edu.kit.datamanager.repo.dao.spec.dataresource.LastUpdateSpecification;
 import edu.kit.datamanager.repo.dao.spec.dataresource.PrimaryIdentifierSpec;
 import edu.kit.datamanager.repo.dao.spec.dataresource.StateSpecification;
 import edu.kit.datamanager.repo.domain.Agent;
+import edu.kit.datamanager.repo.domain.AllIdentifiers;
 import edu.kit.datamanager.repo.domain.DataResource;
 import edu.kit.datamanager.repo.domain.PrimaryIdentifier;
 import edu.kit.datamanager.repo.domain.UnknownInformationConstants;
@@ -49,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -75,6 +78,9 @@ public class DataResourceService implements IDataResourceService {
 
   @Autowired
   private IDataResourceDao dao;
+
+  @Autowired
+  private IAllIdentifiersDao allIdentifiersDao;
 
   private static final Logger logger = LoggerFactory.getLogger(DataResourceService.class);
 
@@ -272,6 +278,7 @@ public class DataResourceService implements IDataResourceService {
 
     logger.trace("Persisting created resource.");
     resource = getDao().save(resource);
+    saveIdentifiers(resource);
 
     logger.trace("Capturing audit information.");
     applicationProperties.getAuditService().captureAuditInformation(resource, AuthenticationHelper.getPrincipal());
@@ -495,6 +502,7 @@ public class DataResourceService implements IDataResourceService {
 
     logger.trace("Persisting updated resource.");
     DataResource result = getDao().save(updated);
+    saveIdentifiers(result);
 
     logger.trace("Capturing audit information.");
     applicationProperties.getAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
@@ -550,6 +558,7 @@ public class DataResourceService implements IDataResourceService {
     newResource.setLastUpdate(Instant.now().truncatedTo(ChronoUnit.MILLIS));
 
     DataResource result = getDao().save(newResource);
+    saveIdentifiers(result);
 
     logger.trace("Capturing audit information.");
     applicationProperties.getAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
@@ -598,31 +607,33 @@ public class DataResourceService implements IDataResourceService {
     after.removeAll(before);
     logger.trace("Remaining new or updated resource identifiers: {}", after);
 
-    checkUniqueIdentifiers(after);
+   
+    String[] afterList = removePredifinedIdentifiers(after);
+    checkForConflicts(afterList);
   }
 
   /**
-   * Check if there is a resource identified with one identifiers from list
-   * 'after' not in 'before'. If at least one resource was found, a
-   * ResourceAlreadyExistsException is throws avoiding any update of the
-   * resource with the new list of identifiers.
+   * Check for predefined identifiers which are not set. Attention. This will
+   * change the list!
    *
    * @param newIdentifiers The list of unique identifiers before an update.
+   * @return unique identifier as string array.
    */
-  private void checkUniqueIdentifiers(List<String> newIdentifiers) {
+  private String[] removePredifinedIdentifiers(List<String> newIdentifiers) {
     logger.trace("Check for new or updated resource identifiers: {}", newIdentifiers);
-
+    String[] identifierArray = new String[0];
     if (newIdentifiers.isEmpty()) {
-      return;
+      return identifierArray;
     }
     List<String> temporaryValues = new ArrayList<>();
     for (UnknownInformationConstants item : UnknownInformationConstants.values()) {
       temporaryValues.add(item.getValue());
     }
     newIdentifiers.removeAll(temporaryValues);
-    String[] afterList = newIdentifiers.toArray(new String[]{});
-    checkForConflicts(afterList);
-  }
+     identifierArray = newIdentifiers.toArray(new String[newIdentifiers.size()]);
+     
+     return identifierArray;
+ }
 
   @Override
   @Transactional(readOnly = false)
@@ -643,7 +654,7 @@ public class DataResourceService implements IDataResourceService {
 
     logger.trace("Persisting resource.");
     DataResource result = getDao().save(resource);
-
+    saveIdentifiers(result);
     //capture state change, not a delete operation as the resource is not physically deleted
     logger.trace("Capturing audit information.");
     applicationProperties.getAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
@@ -661,7 +672,9 @@ public class DataResourceService implements IDataResourceService {
 
   public void testForConflictingIdentifiers(DataResource newResource) {
     List<String> uniqueIdentifiers = getUniqueIdentifiers(newResource);
-    checkUniqueIdentifiers(uniqueIdentifiers);
+    
+    String[] afterList = removePredifinedIdentifiers(uniqueIdentifiers);
+    checkForConflicts(afterList);
   }
 
   private void printInfo(String message) {
@@ -674,26 +687,59 @@ public class DataResourceService implements IDataResourceService {
 
   private void checkForConflicts(String... identifiers) {
     String allIdentifiers = Arrays.toString(identifiers);
-    logger.trace("Checking for existing resource with identifier {}.", allIdentifiers);
+    printInfo("checkForConflicts: " + allIdentifiers);
     //check resource by identifier
-    Specification<DataResource> spec = AlternateIdentifierSpec.toSpecification(identifiers).
-            or(PrimaryIdentifierSpec.toSpecification(identifiers)).
-            or(InternalIdentifierSpec.toSpecification(identifiers));
-    long cnt = getDao().count(spec);
+    List<String> identifierList = new ArrayList<>();
+    Collections.addAll(identifierList, identifiers);
+    long cnt = allIdentifiersDao.countByIdentifierIn(identifierList);
     logger.trace("Found {} existing resources conflicting with provided identifier {}.", cnt, allIdentifiers);
-    if (cnt != 0) {
+    if (cnt > 0) {
       logger.trace("Check if gone...");
-      List<DataResource.State> states = new ArrayList<>();
-      states.add(DataResource.State.GONE);
-      spec = StateSpecification.toSpecification(states).and(spec);
-      if (getDao().count(spec) != 0) {
+      cnt = allIdentifiersDao.countByIdentifierInAndStatus(identifierList, DataResource.State.GONE);
+      if (cnt > 0) {
         String message = String.format("Resource '%s' already gone!", allIdentifiers);
         logger.error(message);
         throw new GoneException(message);
       } else {
         logger.error("Number of conflicting identifiers with identifier {} is neq 0. Throwing ResourceAlreadyExistException.", allIdentifiers);
-        throw new ResourceAlreadyExistException("There is already a resource with identifier " + allIdentifiers);
+        throw new ResourceAlreadyExistException("There is already a resource with at least one of the following identifiers " + allIdentifiers);
       }
+    }
+//    Specification<DataResource> spec = AlternateIdentifierSpec.toSpecification(identifiers).
+//            or(PrimaryIdentifierSpec.toSpecification(identifiers)).
+//            or(InternalIdentifierSpec.toSpecification(identifiers));
+//    long cnt = getDao().count(spec);
+//    logger.trace("Found {} existing resources conflicting with provided identifier {}.", cnt, allIdentifiers);
+//    if (cnt != 0) {
+//      logger.trace("Check if gone...");
+//      List<DataResource.State> states = new ArrayList<>();
+//      states.add(DataResource.State.GONE);
+//      spec = StateSpecification.toSpecification(states).and(spec);
+//      if (getDao().count(spec) != 0) {
+//        String message = String.format("Resource '%s' already gone!", allIdentifiers);
+//        logger.error(message);
+//        throw new GoneException(message);
+//      } else {
+//        logger.error("Number of conflicting identifiers with identifier {} is neq 0. Throwing ResourceAlreadyExistException.", allIdentifiers);
+//        throw new ResourceAlreadyExistException("There is already a resource with identifier " + allIdentifiers);
+//      }
+//    }
+  }
+
+  private void saveIdentifiers(DataResource dataResource) {
+    List<String> uniqueIdentifiers = getUniqueIdentifiers(dataResource);
+    String[] remainingIdentifiers = removePredifinedIdentifiers(uniqueIdentifiers);
+    saveIdentifiers(remainingIdentifiers, dataResource.getId(), dataResource.getState());
+  }
+
+  private void saveIdentifiers(String[] identifiers, String resource, DataResource.State state) {
+    AllIdentifiers result;
+    for (String identifier : identifiers) {
+      result = new AllIdentifiers();
+      result.setIdentifier(identifier);
+      result.setResourceId(resource);
+      result.setStatus(state);
+      allIdentifiersDao.save(result);
     }
   }
 }
