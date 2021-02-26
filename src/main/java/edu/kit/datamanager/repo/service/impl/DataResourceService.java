@@ -311,36 +311,65 @@ public class DataResourceService implements IDataResourceService {
   @Override
   public DataResource findByAnyIdentifier(final String resourceIdentifier, Long version) {
     logger.trace("Performing findByAnyIdentifier({}, {}).", resourceIdentifier, version);
-    Optional<DataResource> result = getDao().findOne(InternalIdentifierSpec.toSpecification(resourceIdentifier));
-
-    if (!result.isPresent()) {
-      logger.error("No data resource found for resource identifier {}. Checking primary and alternate identifiers.", resourceIdentifier);
-      logger.trace("Performing findOne(primaryIdentifier == '{}' || alternateIdentifier == '{}').", resourceIdentifier, resourceIdentifier);
-      try {
-        result = getDao().findOne(AlternateIdentifierSpec.toSpecification(resourceIdentifier).or(PrimaryIdentifierSpec.toSpecification(resourceIdentifier)));
-      } catch (IncorrectResultSizeDataAccessException ex) {
-        logger.error("!!!POTENTIAL INCONSISTENCY DETECTED!!! Multiple resources with primary/alternate identifier {} " + resourceIdentifier + " detected.");
-        throw new CustomInternalServerError("Inconsistent state detected. The provided identifier is mapping to multiple resources.");
-      }
-      if (!result.isPresent()) {
+    // first of all try to get resourceID
+    long nano1 = System.nanoTime() / 1000000;
+    Optional<AllIdentifiers> helperResource = allIdentifiersDao.findById(resourceIdentifier);
+      if (helperResource.isEmpty()) {
         String message = "Data resource with identifier " + resourceIdentifier + " was not found.";
         logger.info(message);
         throw new ResourceNotFoundException(message);
       }
-    }
-    DataResource resource = result.get();
+    long nano2 = System.nanoTime() / 1000000;
+      String correctResourceId = helperResource.get().getResourceId();
+    logger.trace("Resource ID: {} -> {}", resourceIdentifier, version);
+    long nano3 = System.nanoTime() / 1000000;
+    DataResource resource = findById(correctResourceId);
+    long nano4 = System.nanoTime() / 1000000;
     if (Objects.nonNull(version)) {
-      logger.trace("Obtained resource for identifier {}. Checking for shadow of version {}.", resourceIdentifier, version);
+      logger.trace("Obtained resource for identifier {}. Checking for shadow of version {}.", correctResourceId, version);
       Optional<DataResource> optAuditResult = applicationProperties.getAuditService().getResourceByVersion(resource.getId(), version);
       if (optAuditResult.isPresent()) {
-        logger.trace("Shadow successfully obtained. Returning version {} of resource with id {}.", version, resourceIdentifier);
+        logger.trace("Shadow successfully obtained. Returning version {} of resource with id {}.", version, correctResourceId);
         return optAuditResult.get();
       } else {
-        logger.info("Version {} of resource {} not found. Returning HTTP 404 (NOT_FOUND).", version, resourceIdentifier);
-        throw new ResourceNotFoundException("Data resource with identifier " + resourceIdentifier + " is not available in version " + version + ".");
+        logger.info("Version {} of resource {} not found. Returning HTTP 404 (NOT_FOUND).", version, correctResourceId);
+        throw new ResourceNotFoundException("Data resource with identifier " + correctResourceId + " is not available in version " + version + ".");
 
       }
     }
+    long nano5 = System.nanoTime() / 1000000;
+   
+//    Optional<DataResource> result = getDao().findOne(InternalIdentifierSpec.toSpecification(resourceIdentifier));
+//
+//    if (!result.isPresent()) {
+//      logger.error("No data resource found for resource identifier {}. Checking primary and alternate identifiers.", resourceIdentifier);
+//      logger.trace("Performing findOne(primaryIdentifier == '{}' || alternateIdentifier == '{}').", resourceIdentifier, resourceIdentifier);
+//      try {
+//        result = getDao().findOne(AlternateIdentifierSpec.toSpecification(resourceIdentifier).or(PrimaryIdentifierSpec.toSpecification(resourceIdentifier)));
+//      } catch (IncorrectResultSizeDataAccessException ex) {
+//        logger.error("!!!POTENTIAL INCONSISTENCY DETECTED!!! Multiple resources with primary/alternate identifier {} " + resourceIdentifier + " detected.");
+//        throw new CustomInternalServerError("Inconsistent state detected. The provided identifier is mapping to multiple resources.");
+//      }
+//      if (!result.isPresent()) {
+//        String message = "Data resource with identifier " + resourceIdentifier + " was not found.";
+//        logger.info(message);
+//        throw new ResourceNotFoundException(message);
+//      }
+//    }
+//    DataResource resource = result.get();
+//    if (Objects.nonNull(version)) {
+//      logger.trace("Obtained resource for identifier {}. Checking for shadow of version {}.", resourceIdentifier, version);
+//      Optional<DataResource> optAuditResult = applicationProperties.getAuditService().getResourceByVersion(resource.getId(), version);
+//      if (optAuditResult.isPresent()) {
+//        logger.trace("Shadow successfully obtained. Returning version {} of resource with id {}.", version, resourceIdentifier);
+//        return optAuditResult.get();
+//      } else {
+//        logger.info("Version {} of resource {} not found. Returning HTTP 404 (NOT_FOUND).", version, resourceIdentifier);
+//        throw new ResourceNotFoundException("Data resource with identifier " + resourceIdentifier + " is not available in version " + version + ".");
+//
+//      }
+//    }
+//      logger.error("Find by any identifier, {}, {}, {}, {}, {}, {}, {}", nano1, nano2 - nano1, nano3 - nano1, nano4 - nano1, nano4 - nano1, nano5 - nano1);
 
     return resource;
   }
