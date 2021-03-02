@@ -34,6 +34,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -48,6 +50,8 @@ import org.springframework.http.MediaType;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Data
 @EqualsAndHashCode(callSuper = false)
+@Table(uniqueConstraints = {
+  @UniqueConstraint(columnNames = {"resourceId", "relativePath"})})
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Content information element referring to a single file or remote reference in the repository.")
 public class ContentInformation implements Serializable{
@@ -60,10 +64,9 @@ public class ContentInformation implements Serializable{
   @SecureUpdate({"FORBIDDEN"})
   @Searchable
   private Long id;
-  @ManyToOne
   @SecureUpdate({"FORBIDDEN"})
-  @Schema(description = "The dataResource this element is associated with.")
-  private DataResource parentResource;
+  @Schema(description = "The id of the associated dataResource.")
+  private String resourceId;
   @SecureUpdate({"ROLE_ADMINISTRATOR"})//only allow modification by 'real' administrator, not for owner (having ADMINISTRATE permissions)
   @Schema(description = "The relative path of this element under which the file content is accessible. The path is relative the the resource's 'data' url, e.g. http://hostname:port/api/v1/dataresources/resourceId/data/relativePath")
   private String relativePath;
@@ -111,9 +114,7 @@ public class ContentInformation implements Serializable{
       result.getTags().addAll(Arrays.asList(tags));
     }
 
-    DataResource res = new DataResource();
-    res.setId(parentId);
-    result.setParentResource(res);
+    result.setResourceId(parentId);
     return result;
   }
 

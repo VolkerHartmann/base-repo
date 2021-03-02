@@ -1213,14 +1213,14 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testVariousContentDownload() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("missingFile");
     cinfo.setVersioningService("none");
     cinfo.setContentUri("file:///invalidlocation/missingFile");
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("fileWithoutUriScheme");
     cinfo.setVersioningService("none");
     cinfo.setContentUri("/invalidlocation/missingFile");
@@ -1228,21 +1228,21 @@ public class DataResourceControllerTestReadOnly{
 
     Path temp = Files.createTempFile("testVariousContentDownload", "test");
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("validFile");
     cinfo.setContentUri(temp.toUri().toString());
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("invalidRemoteUri");
     cinfo.setContentUri("http://somedomain.new/myFileWhichDoesNotExist");
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("withMediaType");
     cinfo.setMediaType("text/plain");
@@ -1251,7 +1251,7 @@ public class DataResourceControllerTestReadOnly{
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("withRedirect");
     cinfo.setContentUri("http://www.heise.de");
@@ -1286,14 +1286,14 @@ public class DataResourceControllerTestReadOnly{
     Files.write(secondFile, "a test! ".getBytes());
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("firstFile.txt");
     cinfo.setContentUri(firstFile.toUri().toString());
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("secondFile.txt");
     cinfo.setContentUri(secondFile.toUri().toString());
@@ -1317,7 +1317,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchContentInformation() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1342,7 +1342,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchInvalidContentInformationField() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1364,7 +1364,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchWithoutPermissions() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1404,7 +1404,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchWithInvalidEtag() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1423,7 +1423,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchWithAdminPermission() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1448,7 +1448,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchAnonymous() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1470,7 +1470,7 @@ public class DataResourceControllerTestReadOnly{
   public void testDeleteContent() throws Exception{
     Path temp = Files.createTempFile("testDeleteContentAnonymous", "txt");
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1513,7 +1513,7 @@ public class DataResourceControllerTestReadOnly{
   public void testDeleteContentAnonymous() throws Exception{
     Path temp = Files.createTempFile("testDeleteContentAnonymous", "txt");
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();

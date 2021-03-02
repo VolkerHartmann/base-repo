@@ -755,7 +755,7 @@ public class DataResourceService implements IDataResourceService {
 //    }
   }
 
-  private void saveIdentifiers(DataResource dataResource) {
+  public void saveIdentifiers(DataResource dataResource) {
     List<String> uniqueIdentifiers = getUniqueIdentifiers(dataResource);
     String[] remainingIdentifiers = removePredifinedIdentifiers(uniqueIdentifiers);
     saveIdentifiers(remainingIdentifiers, dataResource.getId(), dataResource.getState());

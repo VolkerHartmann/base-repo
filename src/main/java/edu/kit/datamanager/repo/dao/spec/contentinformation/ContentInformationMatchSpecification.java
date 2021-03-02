@@ -45,9 +45,7 @@ public class ContentInformationMatchSpecification{
     return (Root<ContentInformation> root, CriteriaQuery<?> query, CriteriaBuilder builder) -> {
       query.distinct(true);
 
-      Join<ContentInformation, DataResource> joinOptions = root.join("parentResource");
-
-      Path<String> pid = root.get("parentResource").get("id");
+      Path<String> pid = root.get("resourceId");
 
       Predicate basePredicate;
       if(path != null && !exactPath){

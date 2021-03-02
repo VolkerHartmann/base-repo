@@ -20,6 +20,7 @@ import edu.kit.datamanager.exceptions.CustomInternalServerError;
 import edu.kit.datamanager.exceptions.ResourceNotFoundException;
 import edu.kit.datamanager.repo.configuration.DateBasedStorageProperties;
 import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
+import edu.kit.datamanager.repo.dao.IAllIdentifiersDao;
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.ContentInformation;
@@ -83,6 +84,8 @@ public class ContentInformationServiceTest {
   private IDataResourceService dataResourceService;
   @Autowired
   private IDataResourceDao dataResourceDao;
+  @Autowired
+  private IAllIdentifiersDao allIdentifiersDao;
   
   private DataResource parentResource = null;
   
@@ -115,6 +118,7 @@ public class ContentInformationServiceTest {
   public void cleanDb() {
     dao.deleteAll();
     dataResourceDao.deleteAll();
+    allIdentifiersDao.deleteAll();
   }
   
   @Test
@@ -136,9 +140,9 @@ public class ContentInformationServiceTest {
   }
   
   @Test(expected = CustomInternalServerError.class)
-  public void testFindAllWithoutPerent() {
+  public void testFindAllWithoutResourceId() {
     ContentInformation info = createContentInformation("test123", "file.txt", "tag1");
-    info.setParentResource(null);
+    info.setResourceId(null);
     Page<ContentInformation> found = service.findAll(info, PageRequest.of(0, 10));
     Assert.fail("Test should have already failed.");
   }

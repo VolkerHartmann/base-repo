@@ -31,7 +31,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +73,7 @@ public class ContentDataUtils {
           ContentInformation contentInformation,
           boolean force,
           Function<String, String> supplier) {
+    long nano1 = System.nanoTime() / 1000000;
     if (applicationProperties.isReadOnly()) {
       String message = "Repository is in read-only mode. Create content request denied.";
       LOGGER.info(message);
@@ -81,6 +81,7 @@ public class ContentDataUtils {
     }
 
     ControllerUtils.checkAnonymousAccess();
+    long nano2 = System.nanoTime() / 1000000;
     //@TODO escape path properly
     if (path == null || path.length() == 0 || path.endsWith("/")) {
       String message = "Provided path is invalid. Path must not be empty and must not end with a slash.";
@@ -89,8 +90,13 @@ public class ContentDataUtils {
     }
     //check data resource and permissions
     DataResourceUtils.performPermissionCheck(resource, PERMISSION.WRITE);
+        long nano3 = System.nanoTime() / 1000000;
+
     try {
       ContentInformation result = applicationProperties.getContentInformationService().create(contentInformation, resource, path, (file != null) ? file.getInputStream() : null, force);
+          long nano4 = System.nanoTime() / 1000000;
+    LOGGER.error("Add file, {}, {}, {}, {}", nano1, nano2 - nano1, nano3 - nano1, nano4 - nano1);
+
       return result;
     } catch (IOException ex) {
       LOGGER.error("Failed to open file input stream.", ex);
@@ -271,8 +277,8 @@ public class ContentDataUtils {
   public static ContentInformation filterContentInformation(ContentInformation resource) {
     //hide all attributes but the id from the parent data resource in the content information entity
 
-    String id = resource.getParentResource().getId();
-    resource.setParentResource(DataResource.factoryNewDataResource(id));
+    String id = resource.getResourceId();
+    resource.setResourceId(id);
     return resource;
   }
 

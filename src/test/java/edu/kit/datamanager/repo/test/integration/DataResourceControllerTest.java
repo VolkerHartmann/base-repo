@@ -25,6 +25,7 @@ import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.entities.RepoUserRole;
 import edu.kit.datamanager.repo.configuration.ApplicationProperties;
 import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
+import edu.kit.datamanager.repo.dao.IAllIdentifiersDao;
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.Agent;
@@ -48,6 +49,7 @@ import edu.kit.datamanager.repo.domain.Title;
 import edu.kit.datamanager.repo.domain.acl.AclEntry;
 import edu.kit.datamanager.repo.service.IDataResourceService;
 import edu.kit.datamanager.repo.service.impl.ContentInformationAuditService;
+import edu.kit.datamanager.repo.service.impl.DataResourceService;
 import edu.kit.datamanager.repo.service.impl.NoneDataVersioningService;
 import edu.kit.datamanager.service.IAuditService;
 import java.nio.file.Files;
@@ -64,7 +66,6 @@ import java.util.UUID;
 import org.hamcrest.Matchers;
 import static org.hamcrest.Matchers.equalTo;
 import org.javers.core.Javers;
-import static org.javers.core.JaversBuilder.javers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -126,6 +127,8 @@ public class DataResourceControllerTest{
   private IDataResourceService dataResourceService;
   @Autowired
   private IContentInformationDao contentInformationDao;
+  @Autowired
+  private IAllIdentifiersDao allIdentifiersDao;
 
   private IAuditService<ContentInformation> contentInformationAuditService;
 
@@ -151,6 +154,7 @@ public class DataResourceControllerTest{
     contentInformationAuditService = new ContentInformationAuditService(javers, rbc);
     contentInformationDao.deleteAll();
     dataResourceDao.deleteAll();
+    allIdentifiersDao.deleteAll();
 
     adminToken = edu.kit.datamanager.util.JwtBuilder.createUserToken("admin", RepoUserRole.ADMINISTRATOR).
             addSimpleClaim("email", "thomas.jejkal@kit.edu").
@@ -211,6 +215,7 @@ public class DataResourceControllerTest{
     sampleResource.getSubjects().add(Subject.factorySubject("testing", "uri", "en", Scheme.factoryScheme("id", "uri")));
 
     sampleResource = dataResourceDao.save(sampleResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(sampleResource);
 
     otherResource = DataResource.factoryNewDataResource("otherResource");
     otherResource.getDescriptions().add(Description.factoryDescription("This is a description", Description.TYPE.OTHER, "en"));
@@ -225,6 +230,8 @@ public class DataResourceControllerTest{
     otherResource.setState(DataResource.State.REVOKED);
 
     otherResource = dataResourceDao.save(otherResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(otherResource);
+    
 
     revokedResource = DataResource.factoryNewDataResource("revokedResource");
     revokedResource.getDescriptions().add(Description.factoryDescription("This is a description", Description.TYPE.OTHER, "en"));
@@ -238,6 +245,7 @@ public class DataResourceControllerTest{
     revokedResource.setState(DataResource.State.REVOKED);
 
     revokedResource = dataResourceDao.save(revokedResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(revokedResource);
 
     fixedResource = DataResource.factoryNewDataResource("fixedResource");
     fixedResource.getDescriptions().add(Description.factoryDescription("This is a description", Description.TYPE.OTHER, "en"));
@@ -251,6 +259,7 @@ public class DataResourceControllerTest{
     fixedResource.setState(DataResource.State.FIXED);
 
     fixedResource = dataResourceDao.save(fixedResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(fixedResource);
   }
 
   /**
@@ -1336,14 +1345,14 @@ public class DataResourceControllerTest{
   @Test
   public void testVariousContentDownload() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("missingFile");
     cinfo.setVersioningService("none");
     cinfo.setContentUri("file:///invalidlocation/missingFile");
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("fileWithoutUriScheme");
     cinfo.setVersioningService("none");
     cinfo.setContentUri("/invalidlocation/missingFile");
@@ -1351,21 +1360,21 @@ public class DataResourceControllerTest{
 
     Path temp = Files.createTempFile("testVariousContentDownload", "test");
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("validFile");
     cinfo.setContentUri(temp.toUri().toString());
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("invalidRemoteUri");
     cinfo.setContentUri("http://somedomain.new/myFileWhichDoesNotExist");
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("withMediaType");
     cinfo.setMediaType("text/plain");
@@ -1374,7 +1383,7 @@ public class DataResourceControllerTest{
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("withRedirect");
     cinfo.setContentUri("http://www.heise.de");
@@ -1409,14 +1418,14 @@ public class DataResourceControllerTest{
     Files.write(secondFile, "a test! ".getBytes());
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("firstFile.txt");
     cinfo.setContentUri(firstFile.toUri().toString());
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("secondFile.txt");
     cinfo.setContentUri(secondFile.toUri().toString());
@@ -1440,7 +1449,7 @@ public class DataResourceControllerTest{
   @Test
   public void testPatchContentInformation() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1465,7 +1474,7 @@ public class DataResourceControllerTest{
   @Test
   public void testPatchInvalidContentInformationField() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1487,7 +1496,7 @@ public class DataResourceControllerTest{
   @Test
   public void testPatchWithoutPermissions() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1527,7 +1536,7 @@ public class DataResourceControllerTest{
   @Test
   public void testPatchWithInvalidEtag() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1546,7 +1555,7 @@ public class DataResourceControllerTest{
   @Test
   public void testPatchWithAdminPermission() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1571,7 +1580,7 @@ public class DataResourceControllerTest{
   @Test
   public void testPatchAnonymous() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1593,7 +1602,7 @@ public class DataResourceControllerTest{
   public void testDeleteContent() throws Exception{
     Path temp = Files.createTempFile("testDeleteContentAnonymous", "txt");
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1636,7 +1645,7 @@ public class DataResourceControllerTest{
   public void testDeleteContentAnonymous() throws Exception{
     Path temp = Files.createTempFile("testDeleteContentAnonymous", "txt");
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setParentResource(sampleResource);
+    cinfo.setResourceId(sampleResource.getId());
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
