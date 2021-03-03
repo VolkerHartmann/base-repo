@@ -277,8 +277,10 @@ public class ContentDataUtils {
   public static ContentInformation filterContentInformation(ContentInformation resource) {
     //hide all attributes but the id from the parent data resource in the content information entity
 
-    String id = resource.getResourceId();
-    resource.setResourceId(id);
+    String id = resource.getParentResource().getId();
+    DataResource dataResource = new DataResource();
+    dataResource.setId(id);
+    resource.setParentResource(dataResource);
     return resource;
   }
 

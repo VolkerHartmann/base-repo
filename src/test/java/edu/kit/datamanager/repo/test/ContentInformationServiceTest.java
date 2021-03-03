@@ -142,7 +142,7 @@ public class ContentInformationServiceTest {
   @Test(expected = CustomInternalServerError.class)
   public void testFindAllWithoutResourceId() {
     ContentInformation info = createContentInformation("test123", "file.txt", "tag1");
-    info.setResourceId(null);
+    info.setParentResource(null);
     Page<ContentInformation> found = service.findAll(info, PageRequest.of(0, 10));
     Assert.fail("Test should have already failed.");
   }

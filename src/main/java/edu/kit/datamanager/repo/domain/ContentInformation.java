@@ -51,7 +51,7 @@ import org.springframework.http.MediaType;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Table(uniqueConstraints = {
-  @UniqueConstraint(columnNames = {"resourceId", "relativePath"})})
+  @UniqueConstraint(columnNames = {"parent_resource_id", "relativePath"})})
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Content information element referring to a single file or remote reference in the repository.")
 public class ContentInformation implements Serializable{
@@ -64,9 +64,10 @@ public class ContentInformation implements Serializable{
   @SecureUpdate({"FORBIDDEN"})
   @Searchable
   private Long id;
+  @ManyToOne
   @SecureUpdate({"FORBIDDEN"})
-  @Schema(description = "The id of the associated dataResource.")
-  private String resourceId;
+  @Schema(description = "The dataResource this element is associated with.")
+  private DataResource parentResource;
   @SecureUpdate({"ROLE_ADMINISTRATOR"})//only allow modification by 'real' administrator, not for owner (having ADMINISTRATE permissions)
   @Schema(description = "The relative path of this element under which the file content is accessible. The path is relative the the resource's 'data' url, e.g. http://hostname:port/api/v1/dataresources/resourceId/data/relativePath")
   private String relativePath;
@@ -114,7 +115,9 @@ public class ContentInformation implements Serializable{
       result.getTags().addAll(Arrays.asList(tags));
     }
 
-    result.setResourceId(parentId);
+    DataResource res = new DataResource();
+    res.setId(parentId);
+    result.setParentResource(res);
     return result;
   }
 

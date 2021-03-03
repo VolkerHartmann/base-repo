@@ -25,6 +25,7 @@ import edu.kit.datamanager.entities.PERMISSION;
 import edu.kit.datamanager.entities.RepoUserRole;
 import edu.kit.datamanager.repo.configuration.ApplicationProperties;
 import edu.kit.datamanager.repo.configuration.RepoBaseConfiguration;
+import edu.kit.datamanager.repo.dao.IAllIdentifiersDao;
 import edu.kit.datamanager.repo.dao.IContentInformationDao;
 import edu.kit.datamanager.repo.dao.IDataResourceDao;
 import edu.kit.datamanager.repo.domain.Agent;
@@ -48,6 +49,7 @@ import edu.kit.datamanager.repo.domain.Title;
 import edu.kit.datamanager.repo.domain.acl.AclEntry;
 import edu.kit.datamanager.repo.service.IDataResourceService;
 import edu.kit.datamanager.repo.service.impl.ContentInformationAuditService;
+import edu.kit.datamanager.repo.service.impl.DataResourceService;
 import edu.kit.datamanager.repo.service.impl.NoneDataVersioningService;
 import edu.kit.datamanager.service.IAuditService;
 import java.nio.file.Files;
@@ -127,6 +129,11 @@ public class DataResourceControllerTestReadOnly{
   private IDataResourceService dataResourceService;
   @Autowired
   private IContentInformationDao contentInformationDao;
+  @Autowired
+  private IAllIdentifiersDao allIdentifiersDao;
+
+  @Autowired
+  private RepoBaseConfiguration repositoryConfig;
 
   private IAuditService<ContentInformation> contentInformationAuditService;
 
@@ -145,13 +152,9 @@ public class DataResourceControllerTestReadOnly{
 
   @Before
   public void setUp() throws JsonProcessingException{
-    RepoBaseConfiguration rbc = new RepoBaseConfiguration();
-    rbc.setBasepath(applicationProperties.getBasepath());
-    rbc.setReadOnly(applicationProperties.isReadOnly());
-    rbc.setVersioningService(new NoneDataVersioningService());
-    contentInformationAuditService = new ContentInformationAuditService(javers, rbc);
     contentInformationDao.deleteAll();
     dataResourceDao.deleteAll();
+    allIdentifiersDao.deleteAll();
 
     adminToken = edu.kit.datamanager.util.JwtBuilder.createUserToken("admin", RepoUserRole.ADMINISTRATOR).
             addSimpleClaim("email", "thomas.jejkal@kit.edu").
@@ -160,7 +163,7 @@ public class DataResourceControllerTestReadOnly{
             addSimpleClaim("loginFailures", 0).
             addSimpleClaim("active", true).
             addSimpleClaim("locked", false).
-            getCompactToken(applicationProperties.getJwtSecret());
+            getCompactToken(repositoryConfig.getJwtSecret());
 
     userToken = edu.kit.datamanager.util.JwtBuilder.createUserToken("user", RepoUserRole.USER).
             addSimpleClaim("email", "thomas.jejkal@kit.edu").
@@ -168,21 +171,21 @@ public class DataResourceControllerTestReadOnly{
             addSimpleClaim("loginFailures", 0).
             addSimpleClaim("active", true).
             addSimpleClaim("locked", false).
-            getCompactToken(applicationProperties.getJwtSecret());
+            getCompactToken(repositoryConfig.getJwtSecret());
 
     otherUserToken = edu.kit.datamanager.util.JwtBuilder.createUserToken("otheruser", RepoUserRole.USER).
             addSimpleClaim("email", "thomas.jejkal@kit.edu").
             addSimpleClaim("orcid", "0000-0003-2804-688X").
             addSimpleClaim("loginFailures", 0).
             addSimpleClaim("active", true).
-            addSimpleClaim("locked", false).getCompactToken(applicationProperties.getJwtSecret());
+            addSimpleClaim("locked", false).getCompactToken(repositoryConfig.getJwtSecret());
 
     guestToken = edu.kit.datamanager.util.JwtBuilder.createUserToken("guest", RepoUserRole.GUEST).
             addSimpleClaim("email", "thomas.jejkal@kit.edu").
             addSimpleClaim("orcid", "0000-0003-2804-688X").
             addSimpleClaim("loginFailures", 0).
             addSimpleClaim("active", true).
-            addSimpleClaim("locked", false).getCompactToken(applicationProperties.getJwtSecret());
+            addSimpleClaim("locked", false).getCompactToken(repositoryConfig.getJwtSecret());
 
     sampleResource = DataResource.factoryNewDataResource("altIdentifier");
     sampleResource.setState(DataResource.State.VOLATILE);
@@ -212,6 +215,7 @@ public class DataResourceControllerTestReadOnly{
     sampleResource.getSubjects().add(Subject.factorySubject("testing", "uri", "en", Scheme.factoryScheme("id", "uri")));
 
     sampleResource = dataResourceDao.save(sampleResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(sampleResource);
 
     otherResource = DataResource.factoryNewDataResource("otherResource");
     otherResource.getDescriptions().add(Description.factoryDescription("This is a description", Description.TYPE.OTHER, "en"));
@@ -226,6 +230,7 @@ public class DataResourceControllerTestReadOnly{
     otherResource.setState(DataResource.State.REVOKED);
 
     otherResource = dataResourceDao.save(otherResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(otherResource);
 
     revokedResource = DataResource.factoryNewDataResource("revokedResource");
     revokedResource.getDescriptions().add(Description.factoryDescription("This is a description", Description.TYPE.OTHER, "en"));
@@ -239,6 +244,7 @@ public class DataResourceControllerTestReadOnly{
     revokedResource.setState(DataResource.State.REVOKED);
 
     revokedResource = dataResourceDao.save(revokedResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(revokedResource);
 
     fixedResource = DataResource.factoryNewDataResource("fixedResource");
     fixedResource.getDescriptions().add(Description.factoryDescription("This is a description", Description.TYPE.OTHER, "en"));
@@ -252,6 +258,7 @@ public class DataResourceControllerTestReadOnly{
     fixedResource.setState(DataResource.State.FIXED);
 
     fixedResource = dataResourceDao.save(fixedResource);
+    ((DataResourceService)dataResourceService).saveIdentifiers(fixedResource);
   }
 
   /**
@@ -1213,14 +1220,14 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testVariousContentDownload() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("missingFile");
     cinfo.setVersioningService("none");
     cinfo.setContentUri("file:///invalidlocation/missingFile");
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("fileWithoutUriScheme");
     cinfo.setVersioningService("none");
     cinfo.setContentUri("/invalidlocation/missingFile");
@@ -1228,21 +1235,21 @@ public class DataResourceControllerTestReadOnly{
 
     Path temp = Files.createTempFile("testVariousContentDownload", "test");
     cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("validFile");
     cinfo.setContentUri(temp.toUri().toString());
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("invalidRemoteUri");
     cinfo.setContentUri("http://somedomain.new/myFileWhichDoesNotExist");
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("withMediaType");
     cinfo.setMediaType("text/plain");
@@ -1251,7 +1258,7 @@ public class DataResourceControllerTestReadOnly{
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("withRedirect");
     cinfo.setContentUri("http://www.heise.de");
@@ -1286,14 +1293,14 @@ public class DataResourceControllerTestReadOnly{
     Files.write(secondFile, "a test! ".getBytes());
 
     cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("firstFile.txt");
     cinfo.setContentUri(firstFile.toUri().toString());
     contentInformationDao.save(cinfo);
 
     cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setVersioningService("none");
     cinfo.setRelativePath("secondFile.txt");
     cinfo.setContentUri(secondFile.toUri().toString());
@@ -1317,7 +1324,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchContentInformation() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1342,7 +1349,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchInvalidContentInformationField() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1364,7 +1371,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchWithoutPermissions() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1404,7 +1411,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchWithInvalidEtag() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1423,7 +1430,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchWithAdminPermission() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1448,7 +1455,7 @@ public class DataResourceControllerTestReadOnly{
   @Test
   public void testPatchAnonymous() throws Exception{
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1470,7 +1477,7 @@ public class DataResourceControllerTestReadOnly{
   public void testDeleteContent() throws Exception{
     Path temp = Files.createTempFile("testDeleteContentAnonymous", "txt");
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();
@@ -1513,7 +1520,7 @@ public class DataResourceControllerTestReadOnly{
   public void testDeleteContentAnonymous() throws Exception{
     Path temp = Files.createTempFile("testDeleteContentAnonymous", "txt");
     ContentInformation cinfo = new ContentInformation();
-    cinfo.setResourceId(sampleResource.getId());
+    cinfo.setParentResource(sampleResource);
     cinfo.setRelativePath("validFile");
     cinfo.setVersioningService("none");
     Set<String> tags = new HashSet<>();

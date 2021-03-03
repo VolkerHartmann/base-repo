@@ -40,6 +40,15 @@ public class RepoBaseConfiguration {
    * Repo is read only or not.
    */
   private boolean readOnly;
+   
+  /**
+   * Secret for creating tokens. 
+   */
+  private String jwtSecret;
+  /** 
+   * Is authentication enabled or not. 
+   */
+  private boolean authEnabled;
   /**
    * Versioning is supported or not.
    */
@@ -222,6 +231,34 @@ public class RepoBaseConfiguration {
    */
   public void setContentInformationService(IContentInformationService contentInformationService) {
     this.contentInformationService = contentInformationService;
+  }
+
+  /**
+   * @return the jwtSecret
+   */
+  public String getJwtSecret() {
+    return jwtSecret;
+  }
+
+  /**
+   * @param jwtSecret the jwtSecret to set
+   */
+  public void setJwtSecret(String jwtSecret) {
+    this.jwtSecret = jwtSecret;
+  }
+
+  /**
+   * @return the authEnabled
+   */
+  public boolean isAuthEnabled() {
+    return authEnabled;
+  }
+
+  /**
+   * @param authEnabled the authEnabled to set
+   */
+  public void setAuthEnabled(boolean authEnabled) {
+    this.authEnabled = authEnabled;
   }
 
 }

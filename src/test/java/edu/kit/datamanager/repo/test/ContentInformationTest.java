@@ -41,7 +41,7 @@ public class ContentInformationTest{
     Map<String, String> metadata = new HashMap<>();
     metadata.put("type", "a file");
     info.setMetadata(metadata);
-    info.setResourceId(parentResource.getId());
+    info.setParentResource(parentResource);
     Set<String> tags = new HashSet<>();
     tags.add("file");
     tags.add("important");
@@ -55,8 +55,8 @@ public class ContentInformationTest{
     Assert.assertNotNull(info.getMetadata().size());
     Assert.assertEquals(1, info.getMetadata().size());
     Assert.assertEquals("a file", info.getMetadata().get("type"));
-    Assert.assertNotNull(info.getResourceId());
-    Assert.assertEquals(parentResource.getId(), info.getResourceId());
+    Assert.assertNotNull(info.getParentResource());
+    Assert.assertEquals(parentResource.getId(), info.getParentResource().getId());
     Assert.assertNotNull(info.getTags());
     Assert.assertEquals(2, info.getTags().size());
     Assert.assertEquals("data/myfile.txt", info.getRelativePath());
@@ -67,8 +67,8 @@ public class ContentInformationTest{
   @Test
   public void testCreateTemplate(){
     ContentInformation info = ContentInformation.createContentInformation("1", "folder/file.txt", "testing");
-    Assert.assertNotNull(info.getResourceId());
-    Assert.assertEquals("1", info.getResourceId());
+    Assert.assertNotNull(info.getParentResource());
+    Assert.assertEquals("1", info.getParentResource().getId());
     Assert.assertEquals("folder/file.txt", info.getRelativePath());
     Assert.assertFalse(info.getTags().isEmpty());
     Assert.assertEquals("testing", info.getTags().toArray(new String[]{})[0]);
@@ -196,7 +196,7 @@ public class ContentInformationTest{
     Map<String, String> metadata = new HashMap<>();
     metadata.put("type", "a file");
     info1.setMetadata(metadata);
-    info1.setResourceId(parentResource.getId());
+    info1.setParentResource(parentResource);
     Set<String> tags = new HashSet<>();
     tags.add("file");
     tags.add("important");
@@ -210,7 +210,7 @@ public class ContentInformationTest{
     Map<String, String> metadata2 = new HashMap<>();
     metadata2.put("type", "a file");
     info2.setMetadata(metadata2);
-    info2.setResourceId(parentResource.getId());
+    info2.setParentResource(parentResource);
     Set<String> tags2 = new HashSet<>();
     tags2.add("file");
     tags2.add("important");

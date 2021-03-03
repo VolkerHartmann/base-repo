@@ -124,7 +124,7 @@ public class ContentInformationService implements IContentInformationService {
     //check for existing content information
     //We use here no tags as tags are just for reflecting related content elements, but all tags are associated with the same content element.
 //    Page<ContentInformation> existingContentInformation = findAll(ContentInformation.createContentInformation(resource.getId(), path), PageRequest.of(0, 1));
-    Optional<ContentInformation> existingContentInformation = dao.findByResourceIdAndRelativePath(resource.getId(), path);
+    Optional<ContentInformation> existingContentInformation = dao.findByParentResourceAndRelativePath(resource, path);
     Map<String, String> options = new HashMap<>();
     options.put("force", Boolean.toString(force));
 
@@ -138,7 +138,7 @@ public class ContentInformationService implements IContentInformationService {
       //no existing content information, create new or take provided
       contentInfo = (contentInformation != null) ? contentInformation : ContentInformation.createContentInformation(path);
       contentInfo.setId(null);
-      contentInfo.setResourceId(resource.getId());
+      contentInfo.setParentResource(resource);
       contentInfo.setRelativePath(path);
     }
 
@@ -264,7 +264,7 @@ public class ContentInformationService implements IContentInformationService {
     if (path.endsWith("/") || path.isEmpty()) {
       //collection download
 //      ContentInformation info = ContentInformation.createContentInformation(resource.getId(), path);
-      Page<ContentInformation> page = dao.findByResourceId(resource.getId(), PageRequest.of(0, Integer.MAX_VALUE));
+      Page<ContentInformation> page = dao.findByParentResource(resource, PageRequest.of(0, Integer.MAX_VALUE));
       if (page.isEmpty()) {
         //nothing to provide
         String message = "No content found at the provided location.";
@@ -359,6 +359,7 @@ public class ContentInformationService implements IContentInformationService {
 
     LOGGER.trace("Performing findOne({}, {}).", identifier, relativePath);
     Specification<ContentInformation> spec = Specification.where(ContentInformationMatchSpecification.toSpecification(identifier, relativePath, true));
+    
     Optional<ContentInformation> contentInformation = dao.findOne(spec);
 
     if (!contentInformation.isPresent()) {
@@ -417,9 +418,9 @@ public class ContentInformationService implements IContentInformationService {
     } else {
       Specification<ContentInformation> spec;
 
-      if (example.getResourceId() != null) {
-        LOGGER.trace("Parent resource with id {} provided in example. Searching for content in single resource.", example.getResourceId());
-        spec = Specification.where(ContentInformationPermissionSpecification.toSpecification(example.getResourceId(), callerIdentities, PERMISSION.READ));
+      if (example.getParentResource() != null && example.getParentResource().getId() != null) {
+        LOGGER.trace("Parent resource with id {} provided in example. Searching for content in single resource.", example.getParentResource().getId());
+        spec = Specification.where(ContentInformationPermissionSpecification.toSpecification(example.getParentResource().getId(), callerIdentities, PERMISSION.READ));
       } else {
         LOGGER.trace("No parent resource provided in example. Searching for content in all resources.");
         spec = Specification.where(ContentInformationPermissionSpecification.toSpecification(null, callerIdentities, PERMISSION.READ));
@@ -451,10 +452,15 @@ public class ContentInformationService implements IContentInformationService {
         LOGGER.debug("Adding tag query specification for tags {}.", example.getTags());
         spec = spec.and(ContentInformationTagSpecification.toSpecification(example.getTags().toArray(new String[]{})));
       }
-
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("List all entries: ");
+        for (ContentInformation ci : dao.findAll()) {
+          LOGGER.trace("- {}", ci);
+        }
+      }
       LOGGER.trace("Calling findAll for collected specs and page information {}.", pgbl);
       page = dao.findAll(spec, pgbl);
-    }
+      }
 
     LOGGER.trace("Returning page content.");
     return page;
@@ -471,11 +477,11 @@ public class ContentInformationService implements IContentInformationService {
   public Page<ContentInformation> findAll(ContentInformation c, Pageable pgbl) {
     LOGGER.trace("Performing findAll({}, {}).", c, pgbl);
 
-    if (c.getResourceId() == null) {
-      LOGGER.error("Parent resource id in template must not be null. Throwing CustomInternalServerError.");
+    if (c.getParentResource() == null) {
+      LOGGER.error("Parent resource in template must not be null. Throwing CustomInternalServerError.");
       throw new CustomInternalServerError("Parent resource is missing from template.");
     }
-    String parentId = c.getResourceId();
+    String parentId = c.getParentResource().getId();
     String relativePath = c.getRelativePath();
     Set<String> tags = c.getTags();
     //wrong header added!
@@ -506,7 +512,7 @@ public class ContentInformationService implements IContentInformationService {
     applicationProperties.getContentInformationAuditService().captureAuditInformation(result, AuthenticationHelper.getPrincipal());
 
     LOGGER.trace("Sending UPDATE event.");
-    messagingService.send(DataResourceMessage.factoryUpdateDataMessage(resource.getResourceId(), updated.getRelativePath(), updated.getContentUri(), updated.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
+    messagingService.send(DataResourceMessage.factoryUpdateDataMessage(resource.getParentResource().getId(), updated.getRelativePath(), updated.getContentUri(), updated.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
   }
 
   @Override
@@ -519,7 +525,7 @@ public class ContentInformationService implements IContentInformationService {
     applicationProperties.getContentInformationAuditService().deleteAuditInformation(Long.toString(resource.getId()), resource);
 
     LOGGER.trace("Sending DELETE event.");
-    messagingService.send(DataResourceMessage.factoryDeleteDataMessage(resource.getResourceId(), resource.getRelativePath(), resource.getContentUri(), resource.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
+    messagingService.send(DataResourceMessage.factoryDeleteDataMessage(resource.getParentResource().getId(), resource.getRelativePath(), resource.getContentUri(), resource.getMediaType(), AuthenticationHelper.getPrincipal(), ControllerUtils.getLocalHostname()));
   }
 
   protected IContentInformationDao getDao() {

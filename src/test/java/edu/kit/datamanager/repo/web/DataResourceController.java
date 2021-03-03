@@ -82,76 +82,28 @@ public class DataResourceController implements IDataResourceController {
   @Autowired
   private Logger LOGGER = LoggerFactory.getLogger(DataResourceController.class);
   ;
-  @Autowired
-  private final Javers javers;
-  @Autowired
-  private final IDataResourceService dataResourceService;
-  @Autowired
   private final IContentInformationService contentInformationService;
   @Autowired
-  private ApplicationEventPublisher eventPublisher;
-  @Autowired
   private ApplicationProperties applicationProperties;
-  @Autowired
-  private IRepoVersioningService[] versioningServices;
-  @Autowired
-  private IRepoStorageService[] storageServices;
 
   private final IAuditService<DataResource> auditService;
   private final IAuditService<ContentInformation> contentAuditService;
   private final RepoBaseConfiguration repositoryProperties;
 
   /**
-   *
+   * 
    * @param applicationProperties
-   * @param javers
-   * @param dataResourceService
-   * @param contentInformationService
-   * @param versioningServices
-   * @param storageServices
-   * @param eventPublisher
+   * @param repositoryConfig 
    */
   public DataResourceController(ApplicationProperties applicationProperties,
-          Javers javers,
-          IDataResourceService dataResourceService,
-          IContentInformationService contentInformationService,
-          IRepoVersioningService[] versioningServices,
-          IRepoStorageService[] storageServices,
-          ApplicationEventPublisher eventPublisher
+          RepoBaseConfiguration repositoryConfig
   ) {
     this.applicationProperties = applicationProperties;
-    this.javers = javers;
-    this.dataResourceService = dataResourceService;
-    this.contentInformationService = contentInformationService;
-    this.versioningServices = versioningServices;
-    this.storageServices = storageServices;
-    RepoBaseConfiguration rbc = new RepoBaseConfiguration();
-    rbc.setBasepath(applicationProperties.getBasepath());
-    rbc.setReadOnly(applicationProperties.isReadOnly());
-    rbc.setDataResourceService(this.dataResourceService);
-    rbc.setContentInformationService(contentInformationService);
-    rbc.setEventPublisher(eventPublisher);
-    for (IRepoVersioningService versioningService : versioningServices) {
-      if (applicationProperties.getDefaultVersioningService().equals(versioningService.getServiceName())) {
-        LOGGER.info("Set versioning service: {}", versioningService.getServiceName());
-        rbc.setVersioningService(versioningService);
-        break;
-      }
-    }
-    for (IRepoStorageService storageService : storageServices) {
-      if (applicationProperties.getDefaultVersioningService().equals(storageService.getServiceName())) {
-        LOGGER.info("Set storage service: {}", storageService.getServiceName());
-        rbc.setStorageService(storageService);
-        break;
-      }
-    }
-    auditService = new DataResourceAuditService(this.javers, rbc);
-    contentAuditService = new ContentInformationAuditService(this.javers, rbc);
-//    dataResourceService = new DataResourceService();
-    dataResourceService.configure(rbc);
-//    contentInformationService = new ContentInformationService();
-    contentInformationService.configure(rbc);
-    repositoryProperties = rbc;
+    this.contentInformationService = repositoryConfig.getContentInformationService();
+    auditService = repositoryConfig.getAuditService();
+    contentAuditService = repositoryConfig.getContentInformationAuditService();
+    repositoryProperties = repositoryConfig;
+    LOGGER.trace("Show Config: {}", repositoryConfig);
 
     if (!this.applicationProperties.isAuditEnabled() && !"none".equals(this.applicationProperties.getDefaultVersioningService())) {
       String message = "Conflicting configuration properties detected. 'repo.audit.enabled' must be 'true' if 'repo.file.versioning.default' is not 'none'.";

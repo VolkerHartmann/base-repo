@@ -16,6 +16,7 @@
 package edu.kit.datamanager.repo.dao;
 
 import edu.kit.datamanager.repo.domain.ContentInformation;
+import edu.kit.datamanager.repo.domain.DataResource;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
  */
 public interface IContentInformationDao extends JpaRepository<ContentInformation, Long>, JpaSpecificationExecutor<ContentInformation>{
 
-  public Optional<ContentInformation> findByResourceIdAndRelativePath(String parentResourceId, String relativePath);
-  public Page<ContentInformation> findByResourceId(String parentResourceId, Pageable pgbl);
+  public Optional<ContentInformation> findByParentResourceAndRelativePath(DataResource parentResource, String relativePath);
+  public Page<ContentInformation> findByParentResource(DataResource parentResource, Pageable pgbl);
 }
